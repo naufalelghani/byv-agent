@@ -6,6 +6,7 @@
 ## What is added
 
 - `.mcp.json` registers the bundled stdio MCP server with Claude Code using `${CLAUDE_PLUGIN_ROOT}`; no npm package or network service is required for the control plane.
+- MCP `initialize` negotiates the protocol version supported by this server instead of blindly echoing an unsupported client version.
 - `scripts/byv-mcp-server.mjs` implements JSON-RPC initialization, `tools/list`, and `tools/call` over newline-delimited stdio. Stdout is reserved for protocol messages; diagnostic output is written to stderr.
 - `scripts/byv-run-ledger-core.mjs` stores versioned run snapshots as JSON in `.byv-agent/runs/` under the active project directory. Files are ignored by Git.
 - Each run pins the validated registry snapshot, its generation/digest, provider-profile ID, endpoint host, protocol, model ID, selected execution-mode label, and a credential-source category. The ledger never stores API-key/token values.
