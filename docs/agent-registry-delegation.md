@@ -1,6 +1,6 @@
 # P2 — Delegation & Task Validation
 
-**Status:** Tests passed in GitHub Actions; PR review/merge pending  
+**Status:** P2 — DONE; merged through PR #4  
 **Source of truth:** `agents/registry.json`
 
 ## Purpose and boundary
@@ -56,4 +56,4 @@ node scripts/validate-agent-registry.mjs
 node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs tests/delegation-validation.test.mjs
 ```
 
-GitHub Actions run [39977053975](https://github.com/naufalelghani/byv-agent/actions/runs/39977053975) passed registry validation and all 18 tests. Do not mark P2 complete until the pull request has been reviewed and merged.
+GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665) passed registry validation and all 18 tests. The user also verified 18 passed, 0 failed locally on Windows PowerShell. PR #4 was squash-merged into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`.
