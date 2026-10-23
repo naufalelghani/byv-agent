@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "byv-control-plane": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/byv-mcp-server.mjs"],
+      "env": {
+        "BYV_PLUGIN_ROOT": "${CLAUDE_PLUGIN_ROOT}"
+      }
+    }
+  }
+}
