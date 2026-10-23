@@ -17,11 +17,11 @@ Implement the Agent Registry lifecycle for BYV Agent: define and validate agent 
 ## Current overall status
 
 **Current phase: P0 — REVIEW**  
-**Next phase: P1 — TODO (blocked on P0 verification/acceptance)**  
+**Next phase: P1 — TODO (blocked on P0 acceptance)**  
 **Current working branch: `feat/p0-agent-registry-core`**  
 **Related PR: [#2 — feat(P0): implement agent registry core validation](https://github.com/naufalelghani/byv-agent/pull/2)**
 
-P0 files are committed on the PR branch. The authoring environment could not clone GitHub to run Node tests, so the validator and tests have **not yet been executed here**. Do not mark P0 `DONE` until the commands below pass and the PR is reviewed/merged or explicitly accepted.
+P0 files are committed on the PR branch. The two verification commands have now been run successfully in the user's local Windows PowerShell checkout on 2026-10-23. Keep P0 in `REVIEW` until PR #2 is reviewed and merged or explicitly accepted.
 
 ## Phases
 
@@ -42,9 +42,9 @@ Implemented on PR #2:
 - `docs/p0-agent-registry-core.md`
 
 Acceptance / resume checklist:
-- [ ] From repository root, run `node scripts/validate-agent-registry.mjs`.
-- [ ] Run `node --test tests/agent-registry.test.mjs`.
-- [ ] Review any failures and fix them on the P0 branch.
+- [x] From repository root, run `node scripts/validate-agent-registry.mjs` — passed; registry `byv-agent-registry`, schema `1.0.0`, 5 agents.
+- [x] Run `node --test tests/agent-registry.test.mjs` — passed; 2 tests, 0 failures.
+- [x] Review any failures and fix them on the P0 branch — no failures reported by the local run.
 - [ ] Review and merge/accept PR #2.
 - [ ] Change status to `DONE` only after successful verification and acceptance.
 
@@ -126,9 +126,10 @@ Acceptance criteria:
 1. Read this file first: `task/ROADMAP.md`.
 2. Check the PR linked above and the current branch/status in GitHub.
 3. Do not assume a status is complete without checking its acceptance checklist and CI/test results.
-4. Start with the earliest phase not marked `DONE`; currently that is P0 verification/acceptance.
+4. Start with the earliest phase not marked `DONE`; currently that is P0 PR review/acceptance.
 5. Once P0 is accepted, update this file and begin P1. Record implementation links, test commands/results, blockers, and status changes here.
 
 ## Progress log
 
-- 2026-10-23 — P0 validator/schema/tests/docs committed to `feat/p0-agent-registry-core`; PR #2 opened as draft. Tests not executed in the authoring environment due to GitHub clone/network resolution failure. Added this durable roadmap and handoff in `task/ROADMAP.md`.
+- 2026-10-23 — P0 validator/schema/tests/docs committed to `feat/p0-agent-registry-core`; PR #2 opened as draft. Tests were initially not executable in the authoring environment due to GitHub clone/network resolution failure. Added this durable roadmap and handoff in `task/ROADMAP.md`.
+- 2026-10-23 — User ran `node scripts/validate-agent-registry.mjs` successfully (registry valid, 5 agents) and `node --test tests/agent-registry.test.mjs` successfully (2 passed, 0 failed) from a local Windows PowerShell checkout. P0 remains `REVIEW` pending PR review/acceptance.
