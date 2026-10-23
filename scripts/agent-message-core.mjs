@@ -19,22 +19,22 @@ function isObject(value) {
 }
 
 function requireExactKeys(value, requiredKeys, allowedKeys, label) {
-  check(isObject(value), \`\${label} must be an object\`);
+  check(isObject(value), `${label} must be an object`);
   const missing = requiredKeys.filter((key) => !Object.hasOwn(value, key));
   const unsupported = Object.keys(value).filter((key) => !allowedKeys.includes(key));
-  check(missing.length === 0, \`\${label} is missing required field(s): \${missing.join(", ")}\`);
-  check(unsupported.length === 0, \`\${label} contains unsupported field(s): \${unsupported.join(", ")}\`);
+  check(missing.length === 0, `${label} is missing required field(s): ${missing.join(", ")}`);
+  check(unsupported.length === 0, `${label} contains unsupported field(s): ${unsupported.join(", ")}`);
 }
 
 function requireNonEmptyString(value, label) {
-  check(typeof value === "string" && value.trim().length > 0, \`\${label} must be a non-empty string\`);
+  check(typeof value === "string" && value.trim().length > 0, `${label} must be a non-empty string`);
 }
 
 function requireIdentifier(value, label) {
   requireNonEmptyString(value, label);
   check(
     /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(value.trim()),
-    \`\${label} must be a 1-128 character identifier using letters, digits, dot, underscore, colon, or hyphen\`,
+    `${label} must be a 1-128 character identifier using letters, digits, dot, underscore, colon, or hyphen`,
   );
   return value.trim();
 }
@@ -132,7 +132,7 @@ function validatePayload(type, payload) {
       };
     }
     default:
-      fail(\`Unsupported message type: \${type}\`);
+      fail(`Unsupported message type: ${type}`);
   }
 }
 
@@ -154,18 +154,18 @@ export function validateAgentMessage({ registry, message }) {
       Number.isFinite(Date.parse(message.sentAt)),
     "sentAt must be a valid ISO-8601 timestamp with a timezone",
   );
-  check(MESSAGE_TYPES.includes(message.type), \`type must be one of: \${MESSAGE_TYPES.join(", ")}\`);
+  check(MESSAGE_TYPES.includes(message.type), `type must be one of: ${MESSAGE_TYPES.join(", ")}`);
 
   const senderId = requireIdentifier(message.senderId, "senderId");
   const recipientId = requireIdentifier(message.recipientId, "recipientId");
   check(senderId !== recipientId, "An agent cannot send a message to itself");
 
   const sender = registry.agents.find((agent) => agent.id === senderId);
-  check(sender, \`Unknown sender agent id: \${senderId}\`);
-  check(sender.enabled === true, \`Sender agent "\${senderId}" is disabled\`);
+  check(sender, `Unknown sender agent id: ${senderId}`);
+  check(sender.enabled === true, `Sender agent "${senderId}" is disabled`);
   const recipient = registry.agents.find((agent) => agent.id === recipientId);
-  check(recipient, \`Unknown recipient agent id: \${recipientId}\`);
-  check(recipient.enabled === true, \`Recipient agent "\${recipientId}" is disabled\`);
+  check(recipient, `Unknown recipient agent id: ${recipientId}`);
+  check(recipient.enabled === true, `Recipient agent "${recipientId}" is disabled`);
 
   const payload = validatePayload(message.type, message.payload);
   if (message.type === "task") {
