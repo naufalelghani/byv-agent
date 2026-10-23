@@ -1,6 +1,7 @@
 import { access, readFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateAgentRuntimeMappings } from "./agent-runtime-mapping-core.mjs";
 
 export const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -56,7 +57,7 @@ export async function validateRegistryData(registry, schema, root = REPOSITORY_R
 
   const agentKeys = [
     "id", "name", "role", "profile", "type", "description",
-    "capabilities", "enabled", "delegation", "permissions",
+    "capabilities", "enabled", "delegation", "permissions", "runtime",
   ];
   const ids = new Set();
 
@@ -129,6 +130,7 @@ export async function validateRegistryData(registry, schema, root = REPOSITORY_R
     }
   }
 
+  await validateAgentRuntimeMappings({ registry, root });
   return registry;
 }
 
