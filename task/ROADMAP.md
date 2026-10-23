@@ -16,13 +16,11 @@ Implement the Agent Registry lifecycle for BYV Agent: define and validate agent 
 
 ## Current overall status
 
-**Current phase: P4 — REVIEW**  
-**Completed phases: P0 — DONE; P1 — DONE; P2 — DONE; P3 — DONE**  
-**Current P4 branch: `feat/p4-dynamic-registry`**  
-**Current P4 PR: [#6 — feat(P4): add safe dynamic registry reload manager](https://github.com/naufalelghani/byv-agent/pull/6)**  
-**Latest merged PR: [#5 — feat(P3): validate inter-agent message envelopes](https://github.com/naufalelghani/byv-agent/pull/5)**
+**Current project state: P0–P4 — DONE; next phase not yet defined**  
+**Completed phases: P0 — DONE; P1 — DONE; P2 — DONE; P3 — DONE; P4 — DONE**  
+**Latest merged PR: [#6 — feat(P4): add safe dynamic registry reload manager](https://github.com/naufalelghani/byv-agent/pull/6)**
 
-P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 was squash-merged through PR #4 into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`. GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665) passed registry validation and all 18 tests. The user also verified the same 18 tests locally on Windows PowerShell, with 0 failures. P3 was squash-merged through PR #5 into `main` at `dffd293f33a06a769303aef46f3d323dfa3c1594`. GitHub Actions run [39979200629](https://github.com/naufalelghani/byv-agent/actions/runs/39979200629) passed all 29 tests, and the user verified the same 29 tests passed locally on Windows PowerShell. P3 validates message envelopes and prepares a delivery plan; actual message dispatch and task-state persistence are not included. P4 implementation is underway on `feat/p4-dynamic-registry`: it adds a process-local manager for validated, serialized reloads, preserves active state on failures, records bounded audit events, and adds a candidate preflight CLI.
+P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 was squash-merged through PR #4 into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`. GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665) passed registry validation and all 18 tests. The user also verified the same 18 tests locally on Windows PowerShell, with 0 failures. P3 was squash-merged through PR #5 into `main` at `dffd293f33a06a769303aef46f3d323dfa3c1594`. GitHub Actions run [39979200629](https://github.com/naufalelghani/byv-agent/actions/runs/39979200629) passed all 29 tests, and the user verified the same 29 tests passed locally on Windows PowerShell. P3 validates message envelopes and prepares a delivery plan; actual message dispatch and task-state persistence are not included. P4 was squash-merged through PR #6 into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`. GitHub Actions run [39980441173](https://github.com/naufalelghani/byv-agent/actions/runs/39980441173) passed registry validation and all 37 tests (37 passed, 0 failed), and the user verified the same 37 tests locally on Windows PowerShell. P4 adds a process-local manager for validated, serialized reloads, preserves active state on failures, records bounded audit events, and adds a candidate preflight CLI.
 
 ## Phases
 
@@ -112,7 +110,7 @@ Acceptance criteria:
 
 ### P4 — Dynamic Registry
 
-**Status: REVIEW — GitHub Actions passed; PR #6 remains open**
+**Status: DONE**
 
 Goal: safely support registry changes during runtime or controlled reloads.
 
@@ -123,20 +121,21 @@ Implemented on `feat/p4-dynamic-registry`:
 - `docs/agent-registry-dynamic.md` — documents API, transactional semantics, and runtime boundaries.
 - CI includes P4 tests.
 
-Acceptance criteria (CI passed; merge pending):
+Acceptance criteria:
 - [x] Candidate registry is validated fully before activation.
 - [x] Failed updates leave the last valid in-memory registry, generation, digest, and activation timestamp unchanged.
 - [x] Reload calls are serialized; unchanged candidates do not advance generation.
 - [x] Reload behavior and runtime boundaries are documented; positive and negative cases have automated tests.
-- [x] GitHub Actions run [39980353273](https://github.com/naufalelghani/byv-agent/actions/runs/39980353273) passed all 37 tests (37 passed, 0 failed).
-- [ ] PR #6 is reviewed and merged.
+- [x] GitHub Actions run [39980441173](https://github.com/naufalelghani/byv-agent/actions/runs/39980441173) passed all 37 tests (37 passed, 0 failed).
+- [x] User-run Windows PowerShell verification: 37 passed, 0 failed.
+- [x] PR #6 squash-merged into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`.
 
 ## Resume instructions for a future session
 
 1. Read this file first: `task/ROADMAP.md`.
 2. Check the current branch and PR status in GitHub.
 3. Do not assume a status is complete without checking its acceptance checklist and actual test results.
-4. Complete local/CI verification and review PR for P4 — Dynamic Registry before marking P4 DONE.
+4. P0–P4 are complete. Define and agree on the next project phase before starting new implementation.
 
 ## Progress log
 
@@ -153,3 +152,5 @@ Acceptance criteria (CI passed; merge pending):
 - 2026-10-23 — Started P4 on `feat/p4-dynamic-registry`: created a process-local transactional registry manager, candidate validation CLI, runtime tests, CI coverage, and documentation. Runtime changes are in memory only; candidate preflight does not modify the checked-in registry.
 
 - 2026-10-23 — P4 implementation opened as PR #6. GitHub Actions run [39980353273](https://github.com/naufalelghani/byv-agent/actions/runs/39980353273) passed registry validation and all 37 tests (37 passed, 0 failed); P4 moved to REVIEW pending merge.
+
+- 2026-10-23 — P4 squash-merged through PR #6 into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`. User-run Windows PowerShell and GitHub Actions run [39980441173](https://github.com/naufalelghani/byv-agent/actions/runs/39980441173) both reported 37 passed, 0 failed; P4 marked DONE.
