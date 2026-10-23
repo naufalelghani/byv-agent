@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadValidatedRegistry, REPOSITORY_ROOT } from "./agent-registry-core.mjs";
 
 const USAGE = `BYV Agent bootstrap packet generator
@@ -18,15 +19,12 @@ The command validates the registry and delegation policy, then writes a JSON boo
 It prepares context for a host to inject; it does not spawn a subagent or enforce host permissions.`;
 
 function parseArguments(argv) {
-  const options = {
-    acceptanceCriteria: [],
-    relevantContext: [],
-  };
-  const singleValueOptions = new Set([
-    "--agent",
-    "--parent",
-    "--task",
-    "--expected-output",
+  const options = { acceptanceCriteria: [], relevantContext: [] };
+  const singleValueOptions = new Map([
+    ["--agent", "agentId"],
+    ["--parent", "parentAgentId"],
+    ["--task", "task"],
+    ["--expected-output", "expectedOutput"],
   ]);
   const repeatableOptions = new Map([
     ["--acceptance", "acceptanceCriteria"],
@@ -49,26 +47,21 @@ function parseArguments(argv) {
     if (repeatableOptions.has(option)) {
       options[repeatableOptions.get(option)].push(value);
     } else {
-      if (Object.hasOwn(options, option)) {
+      const key = singleValueOptions.get(option);
+      if (Object.hasOwn(options, key)) {
         throw new Error(`Option ${option} was supplied more than once`);
       }
-      const key = {
-        "--agent": "agentId",
-        "--parent": "parentAgentId",
-        "--task": "task",
-        "--expected-output": "expectedOutput",
-      }[option];
       options[key] = value;
     }
   }
 
-  for (const required of ["agentId", "task", "expectedOutput"]) {
-    if (typeof options[required] !== "string" || !options[required].trim()) {
-      throw new Error(`Missing required option: ${({
-        agentId: "--agent",
-        task: "--task",
-        expectedOutput: "--expected-output",
-      })[required]}\n\n${USAGE}`);
+  for (const [key, option] of [
+    ["agentId", "--agent"],
+    ["task", "--task"],
+    ["expectedOutput", "--expected-output"],
+  ]) {
+    if (typeof options[key] !== "string" || !options[key].trim()) {
+      throw new Error(`Missing required option: ${option}\n\n${USAGE}`);
     }
   }
   if (options.acceptanceCriteria.length === 0) {
@@ -79,8 +72,8 @@ function parseArguments(argv) {
 }
 
 /**
- * Build the startup context for a host-supported agent spawn.
- * The caller must pass registry data that has already passed validateRegistryData/loadValidatedRegistry.
+ * Build startup context for a host-supported agent spawn.
+ * The caller must provide registry data that passed loadValidatedRegistry().
  */
 export async function createBootstrapPacket({
   registry,
@@ -118,15 +111,17 @@ export async function createBootstrapPacket({
 
   let parent = null;
   if (parentAgentId) {
-    parent = agents.find((entry) => entry.id === parentAgentId);
-    if (!parent) throw new Error(`Unknown parent agent id: ${parentAgentId}`);
-    if (!parent.enabled) throw new Error(`Parent agent "${parentAgentId}" is disabled`);
+    const parentId = parentAgentId.trim();
+    if (!parentId) throw new Error("parentAgentId must be a non-empty string when supplied");
+    parent = agents.find((entry) => entry.id === parentId);
+    if (!parent) throw new Error(`Unknown parent agent id: ${parentId}`);
+    if (!parent.enabled) throw new Error(`Parent agent "${parentId}" is disabled`);
     if (parent.id === agent.id) throw new Error("An agent cannot bootstrap itself as its own child");
     if (!parent.delegation.canDelegate) {
-      throw new Error(`Parent agent "${parentAgentId}" is not permitted to delegate`);
+      throw new Error(`Parent agent "${parentId}" is not permitted to delegate`);
     }
     if (!parent.delegation.allowedTargets.includes(agent.id)) {
-      throw new Error(`Parent agent "${parentAgentId}" is not allowed to delegate to "${agent.id}"`);
+      throw new Error(`Parent agent "${parentId}" is not allowed to delegate to "${agent.id}"`);
     }
   } else if (agent.type !== "orchestrator") {
     throw new Error(`Parent agent id is required when bootstrapping worker "${agentId}"`);
@@ -146,10 +141,7 @@ export async function createBootstrapPacket({
 
   return {
     packetVersion: "1.0.0",
-    registry: {
-      id: registry.registryId,
-      schemaVersion: registry.schemaVersion,
-    },
+    registry: { id: registry.registryId, schemaVersion: registry.schemaVersion },
     agent: {
       id: agent.id,
       name: agent.name,
@@ -165,10 +157,7 @@ export async function createBootstrapPacket({
       acceptanceCriteria: acceptanceCriteria.map((item) => item.trim()),
       relevantContext: relevantContext.map((item) => item.trim()),
     },
-    profile: {
-      path: agent.profile,
-      content: profileContent,
-    },
+    profile: { path: agent.profile, content: profileContent },
     permissions: {
       sourceAccess: agent.permissions.sourceAccess,
       shell: agent.permissions.shell,
@@ -199,7 +188,7 @@ async function main() {
   console.log(JSON.stringify(packet, null, 2));
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname)) {
+if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
   main().catch((error) => {
     console.error(`Agent bootstrap failed: ${error.message}`);
     process.exitCode = 1;
