@@ -16,11 +16,12 @@ Implement the Agent Registry lifecycle for BYV Agent: define and validate agent 
 
 ## Current overall status
 
-**Current project state: P0–P4 — DONE; next phase not yet defined**  
+**Current phase: P5 — DESIGN REVIEW**  
 **Completed phases: P0 — DONE; P1 — DONE; P2 — DONE; P3 — DONE; P4 — DONE**  
+**P5 design: [docs/p5-runtime-orchestration.md](../docs/p5-runtime-orchestration.md)**  
 **Latest merged PR: [#6 — feat(P4): add safe dynamic registry reload manager](https://github.com/naufalelghani/byv-agent/pull/6)**
 
-P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 was squash-merged through PR #4 into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`. GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665) passed registry validation and all 18 tests. The user also verified the same 18 tests locally on Windows PowerShell, with 0 failures. P3 was squash-merged through PR #5 into `main` at `dffd293f33a06a769303aef46f3d323dfa3c1594`. GitHub Actions run [39979200629](https://github.com/naufalelghani/byv-agent/actions/runs/39979200629) passed all 29 tests, and the user verified the same 29 tests passed locally on Windows PowerShell. P3 validates message envelopes and prepares a delivery plan; actual message dispatch and task-state persistence are not included. P4 was squash-merged through PR #6 into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`. GitHub Actions run [39980441173](https://github.com/naufalelghani/byv-agent/actions/runs/39980441173) passed registry validation and all 37 tests (37 passed, 0 failed), and the user verified the same 37 tests locally on Windows PowerShell. P4 adds a process-local manager for validated, serialized reloads, preserves active state on failures, records bounded audit events, and adds a candidate preflight CLI.
+P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 was squash-merged through PR #4 into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`. GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665) passed registry validation and all 18 tests. The user also verified the same 18 tests locally on Windows PowerShell, with 0 failures. P3 was squash-merged through PR #5 into `main` at `dffd293f33a06a769303aef46f3d323dfa3c1594`. GitHub Actions run [39979200629](https://github.com/naufalelghani/byv-agent/actions/runs/39979200629) passed all 29 tests, and the user verified the same 29 tests passed locally on Windows PowerShell. P3 validates message envelopes and prepares a delivery plan; actual message dispatch and task-state persistence are not included. P4 was squash-merged through PR #6 into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`. GitHub Actions run [39980441173](https://github.com/naufalelghani/byv-agent/actions/runs/39980441173) passed registry validation and all 37 tests (37 passed, 0 failed), and the user verified the same 37 tests locally on Windows PowerShell. P4 adds a process-local manager for validated, serialized reloads, preserves active state on failures, records bounded audit events, and adds a candidate preflight CLI. P5 design is now documented in `docs/p5-runtime-orchestration.md`; implementation is not yet started. API-key-only CLI operation and third-party endpoint compatibility are mandatory design constraints.
 
 ## Phases
 
@@ -135,7 +136,7 @@ Acceptance criteria:
 1. Read this file first: `task/ROADMAP.md`.
 2. Check the current branch and PR status in GitHub.
 3. Do not assume a status is complete without checking its acceptance checklist and actual test results.
-4. P0–P4 are complete. Define and agree on the next project phase before starting new implementation.
+4. Review `docs/p5-runtime-orchestration.md` and agree on its API-first provider-compatibility contract before implementing P5. Then split implementation into P5.1–P5.4 pull requests.
 
 ## Progress log
 
@@ -154,3 +155,5 @@ Acceptance criteria:
 - 2026-10-23 — P4 implementation opened as PR #6. GitHub Actions run [39980353273](https://github.com/naufalelghani/byv-agent/actions/runs/39980353273) passed registry validation and all 37 tests (37 passed, 0 failed); P4 moved to REVIEW pending merge.
 
 - 2026-10-23 — P4 squash-merged through PR #6 into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`. User-run Windows PowerShell and GitHub Actions run [39980441173](https://github.com/naufalelghani/byv-agent/actions/runs/39980441173) both reported 37 passed, 0 failed; P4 marked DONE.
+
+- 2026-10-24 — Drafted P5 runtime orchestration specification. Mandatory constraints include Claude Code CLI API-key/gateway authentication without claude.ai account login, explicit Anthropic Messages protocol compatibility for third-party endpoints, secret redaction, registry-to-runtime mapping, durable run ledger, native runtime integration, fallback behavior, and provider/model-specific end-to-end tests. This is design only; P5 implementation has not started.
