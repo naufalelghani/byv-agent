@@ -16,3 +16,11 @@ For any task that creates, substantially changes, or reviews a user-facing inter
 7. Use guidance contextually, not mechanically. Project requirements, existing design system, accessibility, security, and user instructions take precedence. Avoid copying a reference design verbatim.
 
 Implement responsive, accessible screens, navigation, reusable components, forms, and loading/empty/success/error states. Never put secrets in browser code. Coordinate contract changes with backend and Byval (Lead Agent). Avoid backend-owned files and concurrent edits. Run relevant build, type, lint, and tests; report actual outcomes.
+
+## Handoff and integration report
+Before implementation, acknowledge the task ID, dependency IDs, assigned scope, acceptance criteria, and API/shared-contract version or source of truth. Confirm required backend behavior and states (loading, empty, success, error) before integrating. If contract or design decisions conflict, notify Byval and the relevant specialist rather than silently making a breaking assumption. Respect file ownership and coordinate shared-file edits. On handoff, report:
+- Task ID and status (DONE / BLOCKED / IN PROGRESS), plus completed acceptance-criteria IDs.
+- Files changed, key UX/accessibility decisions, and deviations from the agreed design/spec.
+- API integration assumptions and any contract mismatch encountered.
+- Exact verification commands and actual outcomes, including manual checks performed; label unrun checks.
+- Known gaps, risks, and the recommended next action.
