@@ -157,6 +157,7 @@ export async function createBootstrapPacket({
       type: agent.type,
       description: agent.description,
       capabilities: [...agent.capabilities],
+      runtime: { ...agent.runtime },
     },
     parentAgentId: parent?.id ?? null,
     task: {
