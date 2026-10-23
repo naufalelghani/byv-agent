@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { loadValidatedRegistry, REPOSITORY_ROOT } from "../scripts/agent-registry-core.mjs";
 import { inspectApiOnlyEnvironment } from "../scripts/byv-runtime-doctor.mjs";
 import { validateAgentRuntimeMappings } from "../scripts/agent-runtime-mapping-core.mjs";
+import { validateProviderProfiles } from "../scripts/provider-profile-core.mjs";
 
 const root = REPOSITORY_ROOT;
 
@@ -101,8 +102,17 @@ test("provider profile example is valid JSON and contains no secret values", asy
   const example = JSON.parse(await readFile(resolve(root, "config/provider-profiles.example.json"), "utf8"));
   const schema = JSON.parse(await readFile(resolve(root, "config/provider-profiles.schema.json"), "utf8"));
   assert.equal(example.schemaVersion, schema.properties.schemaVersion.const);
-  assert.equal(example.profiles.length, 1);
-  assert.equal(example.profiles[0].verificationStatus, "unverified");
+  const result = validateProviderProfiles(example, schema);
+  assert.equal(result.valid, true);
+  assert.equal(example.profiles.length, 2);
+  assert.ok(example.profiles.every((profile) => profile.verificationStatus === "unverified"));
   assert.equal(JSON.stringify(example).includes("sk-ant-"), false);
-  assert.deepEqual(example.profiles[0].credentialEnv, ["ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"]);
+  assert.deepEqual(
+    example.profiles.find((profile) => profile.id === "custom-gateway-example").credentialEnv,
+    ["ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"],
+  );
+
+  const unsafe = structuredClone(example);
+  unsafe.profiles[0].apiKey = "must-not-be-present";
+  assert.throws(() => validateProviderProfiles(unsafe, schema), /unsupported field/);
 });
