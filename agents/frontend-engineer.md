@@ -19,7 +19,7 @@ Implement responsive, accessible screens, navigation, reusable components, forms
 
 ## Handoff and integration report
 Before implementation, acknowledge the task ID, dependency IDs, assigned scope, acceptance criteria, and API/shared-contract version or source of truth. Confirm required backend behavior and states (loading, empty, success, error) before integrating. If contract or design decisions conflict, notify Byval and the relevant specialist rather than silently making a breaking assumption. Respect file ownership and coordinate shared-file edits. On handoff, report:
-- Task ID and status (DONE / BLOCKED / IN PROGRESS), plus completed acceptance-criteria IDs.
+- Task ID and canonical ledger status (TODO / READY / IN PROGRESS / BLOCKED / REVIEW / DONE), plus completed acceptance-criteria IDs. Submit a completed handoff as REVIEW; Byval alone accepts it into DONE.
 - Files changed, key UX/accessibility decisions, and deviations from the agreed design/spec.
 - API integration assumptions and any contract mismatch encountered.
 - Exact verification commands and actual outcomes, including manual checks performed; label unrun checks.
