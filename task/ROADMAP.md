@@ -16,11 +16,12 @@ Implement the Agent Registry lifecycle for BYV Agent: define and validate agent 
 
 ## Current overall status
 
-**Current phase: P3 — TODO**  
+**Current phase: P3 — IN PROGRESS**  
 **Completed phases: P0 — DONE; P1 — DONE; P2 — DONE**  
+**Current P3 branch: `feat/p3-inter-agent-messaging`**  
 **Latest merged PR: [#4 — feat(P2): validate delegation requests and task payloads](https://github.com/naufalelghani/byv-agent/pull/4)**
 
-P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 was squash-merged through PR #4 into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`. GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665) passed registry validation and all 18 tests. The user also verified the same 18 tests locally on Windows PowerShell, with 0 failures. P3 is the next phase.
+P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 was squash-merged through PR #4 into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`. GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665) passed registry validation and all 18 tests. The user also verified the same 18 tests locally on Windows PowerShell, with 0 failures. P3 implementation is underway on `feat/p3-inter-agent-messaging`: it adds strict versioned message-envelope validation, sender/recipient registry checks, task-message delegation checks, a validation CLI, tests, CI coverage, and documentation. Actual message dispatch and task-state persistence are not included.
 
 ## Phases
 
@@ -88,20 +89,24 @@ Acceptance criteria:
 
 ### P3 — Inter-Agent Messaging
 
-**Status: TODO — depends on P1 and P2**
+**Status: IN PROGRESS — implementation and CI review pending**
 
 Goal: define and implement a consistent message envelope and message handling path between agents.
 
-Planned work:
-- Specify message envelope fields, sender/recipient identity, correlation/task IDs, and payload.
-- Implement message validation and routing/handling integration.
-- Define error and response behavior.
-- Add tests for valid, invalid, and unsupported messages.
+Implemented on `feat/p3-inter-agent-messaging`:
+- `scripts/agent-message-core.mjs` — validates envelope version, IDs, ISO-8601 timestamps, type-specific payloads, enabled sender/recipient, and delegation policy for task messages. Returns a normalized message and a `validated_not_dispatched` delivery plan.
+- `scripts/validate-agent-message.mjs` — CLI reads a JSON envelope file and emits the normalized message/delivery plan; it does not dispatch messages.
+- `tests/agent-message.test.mjs` — valid task/reply messages, unknown/disabled identities, policy violations, malformed IDs/timestamps/payloads, unsupported fields/types, and CLI error/success paths.
+- `docs/agent-registry-messaging.md` — documents the message envelope and explicit runtime boundary.
+- `.github/workflows/agent-registry.yml` now runs P3 messaging tests.
 
-Acceptance criteria:
-- [ ] Messages follow a documented, validated envelope.
-- [ ] Sender/recipient and task context are checked against registry rules.
-- [ ] Automated tests cover normal and error paths.
+Runtime boundary: there is no message transport or task ledger yet. Correlation IDs and acknowledgements are format-validated; they cannot be checked against persisted prior messages.
+
+Acceptance criteria (pending CI and PR review):
+- [x] Messages follow a documented, strict versioned envelope with type-specific payloads.
+- [x] Enabled sender/recipient identities are checked against registry; new task messages reuse delegation policy.
+- [x] Automated tests cover normal and error paths.
+- [ ] GitHub Actions passes on the P3 branch and PR is reviewed/merged.
 
 ### P4 — Dynamic Registry
 
@@ -126,10 +131,12 @@ Acceptance criteria:
 1. Read this file first: `task/ROADMAP.md`.
 2. Check the current branch and PR status in GitHub.
 3. Do not assume a status is complete without checking its acceptance checklist and actual test results.
-4. Begin P3 — Inter-Agent Messaging, defining and validating the message envelope, sender/recipient identity, task correlation, and message error behavior.
+4. Complete review and merge of P3 — Inter-Agent Messaging after CI passes; then begin P4 — Dynamic Registry.
 
 ## Progress log
 
 - 2026-10-23 — P0 schema, validator, tests, and docs verified locally and merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`.
 - 2026-10-23 — P1 bootstrap CLI, tests, CI, and docs merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`; user confirmed 8/8 local tests passed.
 - 2026-10-23 — P2 delegation/task validator, CLI, tests, CI, and docs passed user local verification (18/18) and GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665). PR #4 was squash-merged into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`; P2 marked DONE.
+
+- 2026-10-23 — Started P3 on `feat/p3-inter-agent-messaging`: added versioned message-envelope validation, type-specific payload validation, registry identity and task-delegation checks, a CLI validation/delivery-plan step, tests, CI coverage, and documentation. Actual transport and task-state persistence remain out of scope.
