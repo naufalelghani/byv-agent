@@ -16,12 +16,13 @@ Implement the Agent Registry lifecycle for BYV Agent: define and validate agent 
 
 ## Current overall status
 
-**Current phase: P5 — DESIGN REVIEW**  
+**Current phase: P5.1 — REVIEW**  
 **Completed phases: P0 — DONE; P1 — DONE; P2 — DONE; P3 — DONE; P4 — DONE**  
-**P5 design: [docs/p5-runtime-orchestration.md](../docs/p5-runtime-orchestration.md)**  
-**Latest merged PR: [#6 — feat(P4): add safe dynamic registry reload manager](https://github.com/naufalelghani/byv-agent/pull/6)**
+**Current branch: `feat/p5-1-api-first-runtime-mapping`**  
+**P5 design: [docs/p5-runtime-orchestration.md](../docs/p5-runtime-orchestration.md), merged through [PR #7](https://github.com/naufalelghani/byv-agent/pull/7)**  
+**Latest merged PR: [#7 — docs(P5): design API-first runtime orchestration](https://github.com/naufalelghani/byv-agent/pull/7)**
 
-P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 was squash-merged through PR #4 into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`. GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665) passed registry validation and all 18 tests. The user also verified the same 18 tests locally on Windows PowerShell, with 0 failures. P3 was squash-merged through PR #5 into `main` at `dffd293f33a06a769303aef46f3d323dfa3c1594`. GitHub Actions run [39979200629](https://github.com/naufalelghani/byv-agent/actions/runs/39979200629) passed all 29 tests, and the user verified the same 29 tests passed locally on Windows PowerShell. P3 validates message envelopes and prepares a delivery plan; actual message dispatch and task-state persistence are not included. P4 was squash-merged through PR #6 into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`. GitHub Actions run [39980441173](https://github.com/naufalelghani/byv-agent/actions/runs/39980441173) passed registry validation and all 37 tests (37 passed, 0 failed), and the user verified the same 37 tests locally on Windows PowerShell. P4 adds a process-local manager for validated, serialized reloads, preserves active state on failures, records bounded audit events, and adds a candidate preflight CLI. P5 design is now documented in `docs/p5-runtime-orchestration.md`; implementation is not yet started. API-key-only CLI operation and third-party endpoint compatibility are mandatory design constraints.
+P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 was squash-merged through PR #4 into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`. GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665) passed registry validation and all 18 tests. The user also verified the same 18 tests locally on Windows PowerShell, with 0 failures. P3 was squash-merged through PR #5 into `main` at `dffd293f33a06a769303aef46f3d323dfa3c1594`. GitHub Actions run [39979200629](https://github.com/naufalelghani/byv-agent/actions/runs/39979200629) passed all 29 tests, and the user verified the same 29 tests passed locally on Windows PowerShell. P3 validates message envelopes and prepares a delivery plan; actual message dispatch and task-state persistence are not included. P4 was squash-merged through PR #6 into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`. GitHub Actions run [39980441173](https://github.com/naufalelghani/byv-agent/actions/runs/39980441173) passed registry validation and all 37 tests (37 passed, 0 failed), and the user verified the same 37 tests locally on Windows PowerShell. P4 adds a process-local manager for validated, serialized reloads, preserves active state on failures, records bounded audit events, and adds a candidate preflight CLI. P5 design is merged through PR #7 at `f09db218a0b8e7aa56364cfaffc69b0acd841457`. P5.1 implementation is under review in [PR #8](https://github.com/naufalelghani/byv-agent/pull/8). GitHub Actions run [39988654325](https://github.com/naufalelghani/byv-agent/actions/runs/39988654325) passed registry validation, provider profile validation, and all 49 tests (49 passed, 0 failed). Schema v1.1.0 adds explicit runtime mapping, API-only environment preflight and provider profile metadata validators, and Sam/Morgan tool allowlists are aligned with registry intent. This phase does not yet spawn agents, contact model endpoints, or prove third-party provider compatibility.
 
 ## Phases
 
@@ -131,12 +132,46 @@ Acceptance criteria:
 - [x] User-run Windows PowerShell verification: 37 passed, 0 failed.
 - [x] PR #6 squash-merged into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`.
 
+### P5 — Runtime Orchestration Integration
+
+**Status: IN PROGRESS — P5.1 implementation and CI review pending**
+
+Design approved and merged via PR #7: [P5 Runtime Orchestration](../docs/p5-runtime-orchestration.md).
+
+P5 mandatory constraint: BYV must support Claude Code CLI using explicit API credentials or gateway credentials without requiring claude.ai account login. For custom endpoints, configuration must explicitly declare the Anthropic Messages protocol or a tested translation adapter. Environment checks never expose secret values and never claim a live request or billing path was verified.
+
+#### P5.1 — API-First Configuration & Runtime Mapping
+
+**Status: IN PROGRESS**
+
+Implemented on `feat/p5-1-api-first-runtime-mapping`:
+- `agents/registry.schema.json` and `agents/registry.json` upgraded to schema `1.1.0`; each agent carries a strict `runtime` mapping (Byval is primary session; workers map to bundled custom-agent definitions).
+- `scripts/agent-runtime-mapping-core.mjs` verifies registry mappings against profile frontmatter and fails closed on definition mismatch and obvious tool-allowlist/registry permission conflicts. This is a configuration consistency check, not a host security sandbox.
+- `scripts/byv-runtime-doctor.mjs` inspects API-only env configuration without contacting endpoints or printing credential values.
+- `config/provider-profiles.schema.json`, `config/provider-profiles.example.json`, `scripts/provider-profile-core.mjs`, and `scripts/validate-provider-profiles.mjs` define and validate non-secret provider profile metadata.
+- Bootstrap packets now include the selected agent's runtime mapping.
+- Sam's profile no longer allows Write/Edit. Morgan's profile no longer allows Bash and explicitly asks Byval/authorized runner to execute commands; Morgan does not claim test execution without actual output.
+- `docs/p5-api-first-configuration.md` documents direct API/gateway environment setup and compatibility labels; CI includes provider metadata validation and P5.1 tests.
+
+P5.1 boundary: this work validates configuration and runtime mapping only. The doctor makes no model request, can't prove the actual running Claude Code credential source or provider billing, and cannot make unsupported models compatible. Those require the P5.4 live smoke/compatibility tests. Native runtime dispatch and durable run ledger are P5.2–P5.3.
+
+Acceptance criteria (CI passed; PR review pending):
+- [x] Registry schema v1.1.0 mappings validate against actual worker profile names.
+- [x] Sam and Morgan profile tool allowlists match declared read-only/shell-deny intent.
+- [x] API-only doctor fails closed without explicit credential configuration and redacts all secret values.
+- [x] Custom endpoints require explicit protocol, credential, and model ID; unsafe URL credentials and non-loopback HTTP are rejected.
+- [x] Provider profile metadata schema/example passes validator; secret-bearing fields are rejected.
+- [x] Bootstrap packet includes runtime mapping.
+- [x] The P0–P4 regression suite and new P5.1 tests pass in CI — run [39988654325](https://github.com/naufalelghani/byv-agent/actions/runs/39988654325): 49 passed, 0 failed.
+- [x] Documentation makes clear that preflight is not live provider verification.
+- [ ] PR #8 reviewed and merged.
+
 ## Resume instructions for a future session
 
 1. Read this file first: `task/ROADMAP.md`.
 2. Check the current branch and PR status in GitHub.
 3. Do not assume a status is complete without checking its acceptance checklist and actual test results.
-4. Review `docs/p5-runtime-orchestration.md` and agree on its API-first provider-compatibility contract before implementing P5. Then split implementation into P5.1–P5.4 pull requests.
+4. Review and merge PR #8 when its current head CI is green; then begin P5.2 MCP control plane and durable run ledger.
 
 ## Progress log
 
@@ -157,3 +192,7 @@ Acceptance criteria:
 - 2026-10-23 — P4 squash-merged through PR #6 into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`. User-run Windows PowerShell and GitHub Actions run [39980441173](https://github.com/naufalelghani/byv-agent/actions/runs/39980441173) both reported 37 passed, 0 failed; P4 marked DONE.
 
 - 2026-10-24 — Drafted P5 runtime orchestration specification. Mandatory constraints include Claude Code CLI API-key/gateway authentication without claude.ai account login, explicit Anthropic Messages protocol compatibility for third-party endpoints, secret redaction, registry-to-runtime mapping, durable run ledger, native runtime integration, fallback behavior, and provider/model-specific end-to-end tests. This is design only; P5 implementation has not started.
+
+- 2026-10-24 — P5 design approved and merged through PR #7 at `f09db218a0b8e7aa56364cfaffc69b0acd841457`. Began P5.1 API-first runtime mapping: schema v1.1.0, agent-definition mappings, API-only configuration doctor, provider metadata schema/validator, bootstrap runtime mapping, and reduced Sam/Morgan tool allowlists. No live provider call or runtime spawn is claimed.
+
+- 2026-10-24 — P5.1 opened as PR #8. GitHub Actions run [39988654325](https://github.com/naufalelghani/byv-agent/actions/runs/39988654325) passed registry/provider validation and all 49 tests; moved P5.1 to REVIEW. Provider profile ID remains diagnostic-only until P5.2 wires profile loading into the runtime.
