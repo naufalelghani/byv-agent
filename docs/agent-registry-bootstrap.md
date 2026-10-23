@@ -1,6 +1,6 @@
 # Agent Registry Bootstrap Contract
 
-**Status:** P1 — bootstrap packet generation implemented; host startup injection remains runtime-dependent  
+**Status:** P1 — implemented; P2 adds a shared delegation/task validator. Host startup injection remains runtime-dependent  
 **Registry:** `agents/registry.json`
 
 ## Purpose
@@ -79,3 +79,21 @@ If the host cannot enforce a declared boundary, Byval must constrain the task op
 ## Current capability boundary
 
 P1 provides local registry validation, agent/profile resolution, delegation-policy checks, and JSON startup packet generation. Actual runtime spawning, automatic startup-context injection, inter-agent messaging, dynamic registry reload, and host-enforced permission boundaries are not implemented by this document or helper; they depend on host/orchestrator capabilities and future project phases.
+
+## Shared delegation/task validation (P2)
+
+For a standalone policy check before scheduling work, run:
+
+```sh
+node scripts/validate-delegation.mjs \
+  --requester byval \
+  --target sam \
+  --task "Research the authentication options used by this project" \
+  --expected-output "A concise Markdown comparison with trade-offs" \
+  --acceptance "Recommendations are grounded in repository evidence" \
+  --context "README.md"
+```
+
+The validator accepts only the documented request fields and task payload fields. It checks that the requester and target exist and are enabled, that the requester may delegate to the selected target, and that the task has a non-empty description, expected output, and at least one non-empty acceptance criterion. Unknown command-line options and unsupported payload fields are rejected.
+
+The standalone command returns a normalized delegation contract as JSON; it does not spawn an agent. `scripts/bootstrap-agent.mjs` reuses the same policy validator to avoid divergent delegation rules.
