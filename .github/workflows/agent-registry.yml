@@ -8,6 +8,7 @@ on:
       - "tests/**"
       - "docs/agent-registry-bootstrap.md"
       - "docs/agent-registry-delegation.md"
+      - "docs/agent-registry-messaging.md"
       - "commands/autonomous.md"
       - "task/ROADMAP.md"
       - ".github/workflows/agent-registry.yml"
@@ -21,6 +22,7 @@ on:
       - "tests/**"
       - "docs/agent-registry-bootstrap.md"
       - "docs/agent-registry-delegation.md"
+      - "docs/agent-registry-messaging.md"
       - "commands/autonomous.md"
       - "task/ROADMAP.md"
       - ".github/workflows/agent-registry.yml"
@@ -37,5 +39,5 @@ jobs:
           node-version: 22
       - name: Validate agent registry
         run: node scripts/validate-agent-registry.mjs
-      - name: Run agent registry and bootstrap tests
-        run: node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs tests/delegation-validation.test.mjs
+      - name: Run agent registry, bootstrap, delegation, and messaging tests
+        run: node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs tests/delegation-validation.test.mjs tests/agent-message.test.mjs
