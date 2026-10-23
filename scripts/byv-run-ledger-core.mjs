@@ -1,5 +1,5 @@
 import {
-  mkdir, readdir, readFile, open, rename, unlink, lstat, realpath, stat,
+  mkdir, readdir, readFile, open, rename, unlink, lstat, realpath,
 } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { isAbsolute, relative, resolve, sep } from "node:path";
