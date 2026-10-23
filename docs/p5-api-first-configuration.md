@@ -1,6 +1,6 @@
 # P5.1 — API-First Provider Configuration
 
-**Status:** Implementation on review branch. Configuration preflight only; live provider and Claude Code runtime verification are separate requirements.
+**Status:** P5.1 implementation merged to `main` through PR #8. Configuration preflight only; live provider compatibility and Claude Code runtime verification remain separate requirements.
 
 ## Goal
 
