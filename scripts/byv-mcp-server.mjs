@@ -13,6 +13,7 @@ import { createRunLedger, redactText } from "./byv-run-ledger-core.mjs";
 const SCRIPT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SERVER_NAME = "byv-control-plane";
 const SERVER_VERSION = "0.1.0";
+const SUPPORTED_MCP_PROTOCOL_VERSION = "2025-03-26";
 const JSON_SCHEMA_OBJECT = { type: "object", properties: {}, additionalProperties: false };
 
 function isObject(value) {
@@ -402,9 +403,11 @@ export async function handleMcpRequest(request, controlPlane) {
   }
   if (request.method === "initialize") {
     const requestedVersion = typeof params.protocolVersion === "string"
-      ? params.protocolVersion : "2025-03-26";
+      ? params.protocolVersion : SUPPORTED_MCP_PROTOCOL_VERSION;
+    const protocolVersion = requestedVersion === SUPPORTED_MCP_PROTOCOL_VERSION
+      ? requestedVersion : SUPPORTED_MCP_PROTOCOL_VERSION;
     return response(id, {
-      protocolVersion: requestedVersion,
+      protocolVersion,
       capabilities: { tools: { listChanged: false } },
       serverInfo: { name: SERVER_NAME, version: SERVER_VERSION },
       instructions: "BYV control-plane tools validate registry, prepare agent context, and persist local run/task evidence. They do not spawn agents. Never pass API secrets to tools.",
