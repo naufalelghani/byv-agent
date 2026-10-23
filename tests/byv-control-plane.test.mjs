@@ -172,7 +172,7 @@ test("interrupted in-flight tasks are marked BLOCKED and may be explicitly resum
     await first.updateTask({ runId: run.runId, taskId: "T-01", status: "READY" });
     await first.updateTask({ runId: run.runId, taskId: "T-01", status: "IN_PROGRESS" });
 
-    const recovered = await createRunLedger({ projectRoot });
+    const recovered = await createRunLedger({ projectRoot, recoverAllActiveRuns: true });
     let summary = await recovered.getRunSummary({ runId: run.runId });
     assert.equal(summary.status, "interrupted");
     assert.equal(summary.tasks[0].status, "BLOCKED");
