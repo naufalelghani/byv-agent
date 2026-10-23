@@ -185,7 +185,7 @@ Acceptance checklist:
 - [x] Durable ledger, atomic writes, bounded history/retention, path containment and interrupted-run recovery are implemented.
 - [x] Task transition and acceptance-evidence gates are implemented.
 - [x] Tests and documentation are added.
-- [ ] CI passes on the final PR head.
+- [x] GitHub Actions passes on PR head `d9272cad84ba5f6447f7b5c02b32999b4d275e11`: [run 39999038927](https://github.com/naufalelghani/byv-agent/actions/runs/39999038927), 63 passed, 0 failed.
 - [ ] User/maintainer review and PR merge.
 - [ ] Verify the MCP server launches under the user's Claude Code version using `/mcp` and test the exposed control-plane tools.
 - [ ] P5.3 native runtime dispatch and P5.4 provider compatibility remain separate phases.
@@ -223,4 +223,4 @@ Acceptance checklist:
 
 
 - 2026-10-24 — P5.1 PR #8 squash-merged into `main` at `f902a4122f7fbba9da44360497e1be348f264715` after 49/49 tests and local API-first/Read-tool smoke tests. Provider streaming and native agent dispatch were not certified.
-- 2026-10-24 — Started P5.2 on `feat/p5-2-mcp-control-plane-ledger`: added the bundled stdio MCP control plane, registry status/reload and bootstrap preparation tools, API preflight reporting, durable project-scoped run/task ledger, interruption recovery, enforced task transitions/evidence gates, tests, docs, plugin MCP registration and CI coverage. Final branch CI and PR review are pending.
+- 2026-10-24 — Started P5.2 on `feat/p5-2-mcp-control-plane-ledger`: added the bundled stdio MCP control plane, registry status/reload and bootstrap preparation tools, API preflight reporting, durable project-scoped run/task ledger, interruption recovery, enforced task transitions/evidence gates, tests, docs, plugin MCP registration and CI coverage. Final branch CI and PR review are pending. CI now passes on PR head `d9272cad84ba5f6447f7b5c02b32999b4d275e11` (GitHub Actions run [39999038927](https://github.com/naufalelghani/byv-agent/actions/runs/39999038927), 63 passed, 0 failed).
