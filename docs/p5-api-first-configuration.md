@@ -58,6 +58,8 @@ If the gateway accepts an OpenAI-compatible or other protocol, it needs an expli
 
 The base URL must be HTTPS. Plain HTTP is allowed only for loopback development endpoints. URLs may not contain embedded credentials, query parameters, or fragments.
 
+`BYV_PROVIDER_PROFILE_ID` is only a diagnostic label in P5.1; the doctor does not load or select an endpoint from this ID. `config/provider-profiles.example.json` is reference metadata and is validated separately. Binding a selected profile to the active runtime is part of the later P5.2 control-plane work.
+
 ## Provider profile metadata
 
 - Schema: `config/provider-profiles.schema.json`
