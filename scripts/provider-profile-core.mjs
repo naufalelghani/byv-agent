@@ -56,6 +56,8 @@ export function validateProviderProfiles(config, schema) {
         `${label} direct-api must use anthropic-messages protocol`);
       check(profile.baseUrlEnv === null,
         `${label} direct-api baseUrlEnv must be null`);
+      check(profile.credentialEnv?.includes("ANTHROPIC_API_KEY"),
+        `${label} direct-api must declare ANTHROPIC_API_KEY`);
     } else {
       envName(profile.baseUrlEnv, `${label}.baseUrlEnv`);
     }
@@ -73,8 +75,18 @@ export function validateProviderProfiles(config, schema) {
       check(CAPABILITY_STATUS.has(profile.capabilities[key]),
         `${label}.capabilities.${key} is invalid`);
     }
-    if (Object.hasOwn(profile, "notes")) {
-      check(typeof profile.notes === "string", `${label}.notes must be a string`);
+    check(typeof profile.notes === "string", `${label}.notes must be a string`);
+    if (profile.verificationStatus === "agentic-verified") {
+      check(profile.capabilities.streaming === "supported" &&
+        profile.capabilities.toolUse === "supported" &&
+        profile.capabilities.agentTeams === "supported",
+      `${label} agentic-verified requires streaming, toolUse, and agentTeams to be supported`);
+    }
+    if (profile.verificationStatus === "messages-compatible" ||
+        profile.verificationStatus === "agentic-verified") {
+      check(profile.capabilities.streaming === "supported" &&
+        profile.capabilities.toolUse === "supported",
+      `${label} message compatibility requires streaming and toolUse to be supported`);
     }
     // Profiles are metadata only. Credential values are never allowed as fields.
     for (const forbidden of ["apiKey", "api_key", "token", "secret", "password", "authorization"]) {
