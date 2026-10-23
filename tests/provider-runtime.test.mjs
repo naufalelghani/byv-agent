@@ -1,13 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { resolve, join } from "node:path";
+import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
 import { loadValidatedRegistry, REPOSITORY_ROOT } from "../scripts/agent-registry-core.mjs";
 import { inspectApiOnlyEnvironment } from "../scripts/byv-runtime-doctor.mjs";
 import { validateAgentRuntimeMappings } from "../scripts/agent-runtime-mapping-core.mjs";
 import { validateProviderProfiles } from "../scripts/provider-profile-core.mjs";
 
 const root = REPOSITORY_ROOT;
+const doctorPath = resolve(root, "scripts/byv-runtime-doctor.mjs");
+const profilesCliPath = resolve(root, "scripts/validate-provider-profiles.mjs");
 
 test("API-only preflight accepts an explicit API key without account login assumptions", () => {
   const result = inspectApiOnlyEnvironment({
@@ -115,4 +119,75 @@ test("provider profile example is valid JSON and contains no secret values", asy
   const unsafe = structuredClone(example);
   unsafe.profiles[0].apiKey = "must-not-be-present";
   assert.throws(() => validateProviderProfiles(unsafe, schema), /unsupported field/);
+});
+
+test("API-only doctor CLI redacts credentials and exits successfully for explicit API configuration", () => {
+  const env = { ...process.env, ANTHROPIC_API_KEY: "test-secret-value" };
+  delete env.ANTHROPIC_BASE_URL;
+  delete env.ANTHROPIC_AUTH_TOKEN;
+  const result = spawnSync(process.execPath, [doctorPath, "--api-only", "--json"], {
+    cwd: root, encoding: "utf8", env,
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.status, "configuration_preflight_passed");
+  assert.equal(output.activeCredentialSourceVerified, false);
+  assert.equal(result.stdout.includes("test-secret-value"), false);
+  assert.equal(result.stderr.includes("test-secret-value"), false);
+});
+
+test("API-only doctor CLI blocks missing credentials without using saved account login as a fallback", () => {
+  const env = { ...process.env };
+  for (const key of [
+    "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL",
+    "ANTHROPIC_MODEL", "BYV_PROVIDER_PROTOCOL", "BYV_PROVIDER_PROFILE_ID",
+  ]) delete env[key];
+  const result = spawnSync(process.execPath, [doctorPath, "--api-only", "--json"], {
+    cwd: root, encoding: "utf8", env,
+  });
+  assert.equal(result.status, 1);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.status, "blocked");
+  assert.ok(output.issues.some((issue) => issue.code === "API_KEY_MISSING"));
+});
+
+test("provider profile CLI validates the bundled secret-free example", () => {
+  const result = spawnSync(process.execPath, [profilesCliPath], {
+    cwd: root, encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.valid, true);
+  assert.equal(output.profileCount, 2);
+  assert.equal(output.secretValuesRead, false);
+  assert.equal(output.endpointRequestPerformed, false);
+});
+
+test("runtime mapping rejects read-only and shell-denied tool allowlist conflicts", async () => {
+  const rootDir = await import("node:fs/promises").then(({ mkdtemp }) =>
+    mkdtemp(join(tmpdir(), "byv-runtime-mapping-")));
+  const profilePath = join(rootDir, "sam.md");
+  const base = {
+    agents: [{
+      id: "sam",
+      type: "worker",
+      profile: "sam.md",
+      runtime: { provider: "claude-code", kind: "custom-agent", agentDefinition: "planning-research" },
+      permissions: { sourceAccess: "read-only", shell: "deny", network: "deny" },
+    }],
+  };
+  try {
+    await writeFile(profilePath, "---\\nname: planning-research\\ndescription: test\\ntools: Read, Write\\n---\\nTest profile\\n", "utf8");
+    await assert.rejects(
+      validateAgentRuntimeMappings({ registry: base, root: rootDir }),
+      /Read-only agent "sam" has write-capable tool/,
+    );
+    await writeFile(profilePath, "---\\nname: planning-research\\ndescription: test\\ntools: Read, Bash\\n---\\nTest profile\\n", "utf8");
+    await assert.rejects(
+      validateAgentRuntimeMappings({ registry: base, root: rootDir }),
+      /shell: deny but profile allows Bash/,
+    );
+  } finally {
+    await rm(rootDir, { recursive: true, force: true });
+  }
 });
