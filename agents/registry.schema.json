@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://byv-agent.local/schemas/agent-registry.schema.json",
+  "title": "BYV Agent Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "registryId", "description", "agents"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": "1.0.0" },
+    "registryId": { "type": "string", "minLength": 1, "pattern": "^[a-z][a-z0-9-]*$" },
+    "description": { "type": "string", "minLength": 1 },
+    "agents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "role", "profile", "type", "description", "capabilities", "enabled", "delegation", "permissions"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "pattern": "^[a-z][a-z0-9-]*$" },
+          "name": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1 },
+          "profile": { "type": ["string", "null"] },
+          "type": { "enum": ["orchestrator", "worker"] },
+          "description": { "type": "string", "minLength": 1 },
+          "capabilities": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+          "enabled": { "type": "boolean" },
+          "delegation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["canDelegate", "allowedTargets"],
+            "properties": {
+              "canDelegate": { "type": "boolean" },
+              "allowedTargets": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+            }
+          },
+          "permissions": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["sourceAccess", "shell", "network"],
+            "properties": {
+              "sourceAccess": { "enum": ["read-only", "read-write"] },
+              "shell": { "enum": ["deny", "policy-controlled"] },
+              "network": { "enum": ["deny", "policy-controlled"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}
