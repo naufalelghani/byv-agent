@@ -39,6 +39,7 @@ test("bootstrap CLI includes identity, policy, task, and the registered profile"
   const packet = JSON.parse(result.stdout);
   assert.equal(packet.registry.id, "byv-agent-registry");
   assert.equal(packet.agent.id, "sam");
+  assert.deepEqual(packet.agent.runtime, { provider: "claude-code", kind: "custom-agent", agentDefinition: "planning-research" });
   assert.equal(packet.parentAgentId, "byval");
   assert.equal(packet.profile.path, "agents/planning-research.md");
   assert.match(packet.profile.content, /Sam|Planning|Research/i);
