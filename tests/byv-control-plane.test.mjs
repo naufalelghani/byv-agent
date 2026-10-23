@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -13,6 +13,17 @@ const registryPromise = loadValidatedRegistry({ root: pluginRoot });
 
 async function createTempProject() {
   return mkdtemp(join(tmpdir(), "byv-p52-"));
+}
+
+function findDefinitelyDeadPid() {
+  for (const candidate of [2147483647, 2147483646, 2000000000, 1000000000, 999999999]) {
+    try {
+      process.kill(candidate, 0);
+    } catch (error) {
+      if (error.code === "ESRCH") return candidate;
+    }
+  }
+  return null;
 }
 
 async function createContext() {
@@ -76,7 +87,7 @@ test("run ledger persists a completed run and enforces evidence-backed task tran
     await ledger.updateTask({ runId: created.runId, taskId: "T-01", status: "IN_PROGRESS" });
     await assert.rejects(
       ledger.updateTask({ runId: created.runId, taskId: "T-01", status: "REVIEW" }),
-      /handoff is recorded/,
+      /handoff for the current attempt/,
     );
     await ledger.recordVerification({
       runId: created.runId,
@@ -112,6 +123,63 @@ test("run ledger persists a completed run and enforces evidence-backed task tran
     assert.equal(restored.status, "done");
     assert.equal(restored.tasks[0].status, "DONE");
     assert.ok(restored.events.some((event) => event.event === "run.finished"));
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("rework requires fresh verification and handoff for the current task attempt", async () => {
+  const projectRoot = await createTempProject();
+  try {
+    const ledger = await createRunLedger({ projectRoot });
+    const run = await createActiveRun(ledger);
+    await ledger.recordPlan({ runId: run.runId, tasks: oneTaskPlan() });
+    await ledger.updateTask({ runId: run.runId, taskId: "T-01", status: "READY" });
+    await ledger.updateTask({ runId: run.runId, taskId: "T-01", status: "IN_PROGRESS" });
+    await ledger.recordVerification({
+      runId: run.runId, taskId: "T-01", criterionId: "AC-01",
+      command: "node --test", outcome: "PASS", executed: true,
+      summary: "First attempt passed.",
+    });
+    await ledger.recordHandoff({
+      runId: run.runId, taskId: "T-01", summary: "First attempt handoff.",
+      changedFiles: [], unresolvedRisks: [], nextAction: "Review", evidenceRefs: [],
+    });
+    await ledger.updateTask({ runId: run.runId, taskId: "T-01", status: "REVIEW" });
+    await ledger.updateTask({ runId: run.runId, taskId: "T-01", status: "IN_PROGRESS" });
+
+    let summary = await ledger.getRunSummary({ runId: run.runId });
+    assert.equal(summary.tasks[0].attempt, 2);
+    assert.equal(summary.tasks[0].acceptanceCriteria[0].latestOutcome, "NOT_TESTED");
+    assert.equal(summary.tasks[0].verifications.length, 1);
+    assert.equal(summary.tasks[0].verifications[0].attempt, 1);
+
+    await assert.rejects(
+      ledger.updateTask({ runId: run.runId, taskId: "T-01", status: "REVIEW" }),
+      /handoff for the current attempt/,
+    );
+
+    await ledger.recordVerification({
+      runId: run.runId, taskId: "T-01", criterionId: "AC-01",
+      command: "node --test", outcome: "PASS", executed: true,
+      summary: "Second attempt passed.",
+    });
+    await assert.rejects(
+      ledger.updateTask({ runId: run.runId, taskId: "T-01", status: "REVIEW" }),
+      /handoff for the current attempt/,
+    );
+
+    await ledger.recordHandoff({
+      runId: run.runId, taskId: "T-01", summary: "Second attempt handoff.",
+      changedFiles: [], unresolvedRisks: [], nextAction: "Complete task", evidenceRefs: [],
+    });
+    await ledger.updateTask({ runId: run.runId, taskId: "T-01", status: "REVIEW" });
+    await ledger.updateTask({ runId: run.runId, taskId: "T-01", status: "DONE" });
+
+    summary = await ledger.getRunSummary({ runId: run.runId });
+    assert.equal(summary.tasks[0].status, "DONE");
+    assert.equal(summary.tasks[0].acceptanceCriteria[0].latestOutcome, "PASS");
+    assert.deepEqual(summary.tasks[0].verifications.map((item) => item.attempt), [1, 2]);
   } finally {
     await rm(projectRoot, { recursive: true, force: true });
   }
@@ -189,6 +257,152 @@ test("interrupted in-flight tasks are marked BLOCKED and may be explicitly resum
   }
 });
 
+test("recovery after interruption invalidates prior attempt evidence until fresh handoff and verification", async () => {
+  const projectRoot = await createTempProject();
+  try {
+    const first = await createRunLedger({ projectRoot });
+    const run = await createActiveRun(first);
+    await first.recordPlan({ runId: run.runId, tasks: oneTaskPlan() });
+    await first.updateTask({ runId: run.runId, taskId: "T-01", status: "READY" });
+    await first.updateTask({ runId: run.runId, taskId: "T-01", status: "IN_PROGRESS" });
+
+    await first.recordVerification({
+      runId: run.runId,
+      taskId: "T-01",
+      criterionId: "AC-01",
+      command: "attempt 1 verification",
+      outcome: "PASS",
+      executed: true,
+      summary: "Observed passing verification for attempt 1.",
+    });
+    await first.recordHandoff({
+      runId: run.runId,
+      taskId: "T-01",
+      summary: "Handoff for attempt 1.",
+      changedFiles: [],
+      unresolvedRisks: [],
+      nextAction: "Continue after recovery",
+      evidenceRefs: ["attempt-1"],
+    });
+
+    // Force recovery to simulate a process restart while this test process remains alive.
+    const recovered = await createRunLedger({ projectRoot, recoverAllActiveRuns: true });
+    let summary = await recovered.getRunSummary({ runId: run.runId });
+    assert.equal(summary.status, "interrupted");
+    assert.equal(summary.tasks[0].status, "BLOCKED");
+    assert.equal(summary.tasks[0].attempt, 2);
+    assert.match(summary.tasks[0].blockReason, /outcome is unknown/);
+    assert.equal(summary.tasks[0].acceptanceCriteria[0].latestOutcome, "NOT_TESTED");
+    assert.deepEqual(summary.tasks[0].verifications.map((item) => item.attempt), [1]);
+    assert.equal(summary.tasks[0].handoff.attempt, 1);
+    assert.equal(summary.recoveryCount, 1);
+
+    summary = await recovered.resumeRun({
+      runId: run.runId,
+      reason: "Operator reviewed the interrupted attempt; redo task with fresh evidence.",
+    });
+    assert.equal(summary.status, "in_progress");
+    await recovered.updateTask({ runId: run.runId, taskId: "T-01", status: "READY" });
+    await recovered.updateTask({ runId: run.runId, taskId: "T-01", status: "IN_PROGRESS" });
+
+    summary = await recovered.getRunSummary({ runId: run.runId });
+    assert.equal(summary.tasks[0].status, "IN_PROGRESS");
+    assert.equal(summary.tasks[0].attempt, 2);
+    assert.equal(summary.tasks[0].acceptanceCriteria[0].latestOutcome, "NOT_TESTED");
+    assert.equal(summary.tasks[0].handoff.attempt, 1);
+    assert.deepEqual(summary.tasks[0].verifications.map((item) => item.attempt), [1]);
+
+    await assert.rejects(
+      recovered.updateTask({ runId: run.runId, taskId: "T-01", status: "REVIEW" }),
+      /handoff for the current attempt/,
+    );
+    summary = await recovered.getRunSummary({ runId: run.runId });
+    assert.equal(summary.tasks[0].status, "IN_PROGRESS");
+    assert.equal(summary.tasks[0].attempt, 2);
+    assert.equal(summary.tasks[0].acceptanceCriteria[0].latestOutcome, "NOT_TESTED");
+
+    await recovered.recordHandoff({
+      runId: run.runId,
+      taskId: "T-01",
+      summary: "Fresh handoff for recovered attempt 2.",
+      changedFiles: [],
+      unresolvedRisks: [],
+      nextAction: "Record fresh verification",
+      evidenceRefs: ["attempt-2"],
+    });
+    await assert.rejects(
+      recovered.updateTask({ runId: run.runId, taskId: "T-01", status: "REVIEW" }),
+      /verification evidence for the current attempt/,
+    );
+    summary = await recovered.getRunSummary({ runId: run.runId });
+    assert.equal(summary.tasks[0].status, "IN_PROGRESS");
+    assert.equal(summary.tasks[0].attempt, 2);
+    assert.equal(summary.tasks[0].handoff.attempt, 2);
+    assert.equal(summary.tasks[0].acceptanceCriteria[0].latestOutcome, "NOT_TESTED");
+
+    await recovered.recordVerification({
+      runId: run.runId,
+      taskId: "T-01",
+      criterionId: "AC-01",
+      command: "attempt 2 verification",
+      outcome: "PASS",
+      executed: true,
+      summary: "Observed passing verification after recovery and re-execution.",
+    });
+    await recovered.updateTask({ runId: run.runId, taskId: "T-01", status: "REVIEW" });
+    await recovered.updateTask({ runId: run.runId, taskId: "T-01", status: "DONE" });
+    summary = await recovered.finishRun({
+      runId: run.runId,
+      outcome: "DONE",
+      summary: "Recovered task completed only after fresh attempt 2 evidence.",
+    });
+
+    assert.equal(summary.status, "done");
+    const final = await recovered.getRunSummary({ runId: run.runId });
+    assert.equal(final.tasks[0].status, "DONE");
+    assert.equal(final.tasks[0].attempt, 2);
+    assert.equal(final.tasks[0].acceptanceCriteria[0].latestOutcome, "PASS");
+    assert.deepEqual(final.tasks[0].verifications.map((item) => item.attempt), [1, 2]);
+    assert.equal(final.tasks[0].handoff.attempt, 2);
+    assert.ok(final.events.some((event) =>
+      event.event === "run.interrupted" &&
+      event.details.recoveredTaskAttempts?.some((item) => item.taskId === "T-01" && item.attempt === 2)));
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("a run with a confirmed-dead owner is recovered without a force override", async (t) => {
+  const projectRoot = await createTempProject();
+  try {
+    const deadPid = findDefinitelyDeadPid();
+    if (deadPid === null) {
+      t.skip("Could not identify a definitely non-existent PID on this platform");
+      return;
+    }
+
+    const first = await createRunLedger({ projectRoot });
+    const run = await createActiveRun(first);
+    await first.recordPlan({ runId: run.runId, tasks: oneTaskPlan() });
+    await first.updateTask({ runId: run.runId, taskId: "T-01", status: "READY" });
+    await first.updateTask({ runId: run.runId, taskId: "T-01", status: "IN_PROGRESS" });
+
+    const recordPath = join(first.storageDirectory, run.runId + ".json");
+    const record = JSON.parse(await readFile(recordPath, "utf8"));
+    record.ownerPid = deadPid;
+    await writeFile(recordPath, JSON.stringify(record, null, 2) + "\n", "utf8");
+
+    const recovered = await createRunLedger({ projectRoot });
+    const summary = await recovered.getRunSummary({ runId: run.runId });
+    assert.equal(summary.status, "interrupted");
+    assert.equal(summary.tasks[0].status, "BLOCKED");
+    assert.match(summary.tasks[0].blockReason, /outcome is unknown/);
+    assert.equal(summary.recoveryCount, 1);
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
 test("ledger rejects storage paths outside the project and repository traversal file boundaries", async () => {
   const projectRoot = await createTempProject();
   try {
@@ -215,7 +429,7 @@ test("ledger redacts token-like values before storing or returning evidence", as
     await ledger.recordPlan({ runId: run.runId, tasks: oneTaskPlan() });
     await ledger.updateTask({ runId: run.runId, taskId: "T-01", status: "READY" });
     await ledger.updateTask({ runId: run.runId, taskId: "T-01", status: "IN_PROGRESS" });
-    const raw = "Observed token sk-1234567890-secret and ANTHROPIC_AUTH_TOKEN=super-secret-value";
+    const raw = 'Observed token sk-1234567890-secret and ANTHROPIC_AUTH_TOKEN=super-secret-value; JSON={"ANTHROPIC_AUTH_TOKEN": "json secret with spaces", "apiKey": "nested-json-secret"}';
     await ledger.recordVerification({
       runId: run.runId,
       taskId: "T-01",
@@ -229,9 +443,63 @@ test("ledger redacts token-like values before storing or returning evidence", as
     const saved = await readFile(join(ledger.storageDirectory, run.runId + ".json"), "utf8");
     assert.equal(output.includes("1234567890-secret"), false);
     assert.equal(output.includes("super-secret-value"), false);
+    assert.equal(output.includes("json secret with spaces"), false);
+    assert.equal(output.includes("nested-json-secret"), false);
     assert.equal(saved.includes("1234567890-secret"), false);
     assert.equal(saved.includes("super-secret-value"), false);
+    assert.equal(saved.includes("json secret with spaces"), false);
+    assert.equal(saved.includes("nested-json-secret"), false);
     assert.match(redactText(raw), /REDACTED/);
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("an old lock owned by a live process is not stolen", async () => {
+  const projectRoot = await createTempProject();
+  try {
+    const lockDir = join(projectRoot, ".byv-agent", "runs");
+    await mkdir(lockDir, { recursive: true });
+    const lockPath = join(lockDir, ".ledger.lock");
+    const old = new Date(Date.now() - 60000);
+    await writeFile(lockPath, JSON.stringify({
+      pid: process.pid, token: "live-owner-token", createdAt: old.toISOString(),
+    }), "utf8");
+    await utimes(lockPath, old, old);
+
+    await assert.rejects(
+      createRunLedger({ projectRoot, staleLockMs: 1000, lockTimeoutMs: 150 }),
+      /timed out waiting for the exclusive write lock/,
+    );
+    const lock = JSON.parse(await readFile(lockPath, "utf8"));
+    assert.equal(lock.token, "live-owner-token");
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("a stale lock is reclaimed when its owner is confirmed dead", async (t) => {
+  const projectRoot = await createTempProject();
+  try {
+    const deadPid = findDefinitelyDeadPid();
+    if (deadPid === null) {
+      t.skip("Could not identify a definitely non-existent PID on this platform");
+      return;
+    }
+
+    const lockDir = join(projectRoot, ".byv-agent", "runs");
+    await mkdir(lockDir, { recursive: true });
+    const lockPath = join(lockDir, ".ledger.lock");
+    const old = new Date(Date.now() - 60000);
+    await writeFile(lockPath, JSON.stringify({
+      pid: deadPid, token: "dead-owner-token", createdAt: old.toISOString(),
+    }), "utf8");
+    await utimes(lockPath, old, old);
+
+    const ledger = await createRunLedger({ projectRoot, staleLockMs: 1000, lockTimeoutMs: 500 });
+    assert.deepEqual(await ledger.listRuns(), []);
+    await assert.rejects(readFile(lockPath, "utf8"), { code: "ENOENT" });
+    await assert.rejects(readFile(lockPath + ".reaper", "utf8"), { code: "ENOENT" });
   } finally {
     await rm(projectRoot, { recursive: true, force: true });
   }

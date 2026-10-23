@@ -1,5 +1,5 @@
 import {
-  mkdir, readdir, readFile, open, rename, unlink, lstat, realpath, stat,
+  mkdir, readdir, readFile, open, rename, unlink, lstat, realpath,
 } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { isAbsolute, relative, resolve, sep } from "node:path";
@@ -71,12 +71,16 @@ function runFileName(runId) {
   return validateRunId(runId) + ".json";
 }
 
+const SECRET_FIELD_VALUE = /(["']?(?:ANTHROPIC[_-]?API[_-]?KEY|ANTHROPIC[_-]?AUTH[_-]?TOKEN|OPENAI[_-]?API[_-]?KEY|API[_-]?KEY|AUTH[_-]?TOKEN|ACCESS[_-]?TOKEN|REFRESH[_-]?TOKEN|CLIENT[_-]?SECRET|PRIVATE[_-]?KEY|SECRET(?:[_-]?KEY)?|PASSWORD|CREDENTIALS?|TOKEN|GITHUB[_-]?TOKEN|GH[_-]?TOKEN)["']?\s*[:=]\s*)(["'])(?:\\.|(?!\2)[\s\S])*\2/gi;
+const SECRET_FIELD_UNQUOTED_VALUE = /((?:ANTHROPIC[_-]?API[_-]?KEY|ANTHROPIC[_-]?AUTH[_-]?TOKEN|OPENAI[_-]?API[_-]?KEY|API[_-]?KEY|AUTH[_-]?TOKEN|ACCESS[_-]?TOKEN|REFRESH[_-]?TOKEN|CLIENT[_-]?SECRET|PRIVATE[_-]?KEY|SECRET(?:[_-]?KEY)?|PASSWORD|CREDENTIALS?|TOKEN|GITHUB[_-]?TOKEN|GH[_-]?TOKEN)\s*[:=]\s*)[^\s,;}\]"']+/gi;
+
 export function redactText(value) {
   return String(value)
     .replace(/(authorization\s*:\s*bearer\s+)[^\s,;]+/gi, "$1[REDACTED]")
     .replace(/\bBearer\s+[A-Za-z0-9._~+\/-]{12,}/gi, "Bearer [REDACTED]")
-    .replace(/\b(sk-[A-Za-z0-9_-]{8,})\b/g, "[REDACTED_TOKEN]")
-    .replace(/((?:ANTHROPIC_API_KEY|ANTHROPIC_AUTH_TOKEN|OPENAI_API_KEY|API_KEY|ACCESS_TOKEN|SECRET|TOKEN)\s*[:=]\s*["']?)[^\s"',;]+/gi, "$1[REDACTED]")
+    .replace(/\b(?:sk-(?:ant-)?[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9_]{12,}|github_pat_[A-Za-z0-9_]{12,}|xox[baprs]-[A-Za-z0-9-]{8,})\b/gi, "[REDACTED_TOKEN]")
+    .replace(SECRET_FIELD_VALUE, "$1$2[REDACTED]$2")
+    .replace(SECRET_FIELD_UNQUOTED_VALUE, "$1[REDACTED]")
     .slice(0, 4000);
 }
 
@@ -183,7 +187,7 @@ function normalizeTaskPlan(tasks, registrySnapshot) {
     });
     return {
       taskId, ownerAgentId, dependencies, scope, files, acceptanceCriteria,
-      status: "TODO", blockReason: null, handoff: null, verifications: [],
+      attempt: 1, status: "TODO", blockReason: null, handoff: null, verifications: [],
       createdAt: null, updatedAt: null,
     };
   });
@@ -193,9 +197,27 @@ function normalizeTaskPlan(tasks, registrySnapshot) {
   return normalized;
 }
 
-function latestVerification(task, criterionId) {
+// Records written by the initial P5.2 ledger did not include attempt labels.
+// Treat those records as attempt 1 so the first rework/recovery correctly advances to 2.
+function currentAttempt(task) {
+  return Number.isSafeInteger(task.attempt) && task.attempt >= 1 ? task.attempt : 1;
+}
+
+function verificationAttempt(verification) {
+  return Number.isSafeInteger(verification.attempt) && verification.attempt >= 1
+    ? verification.attempt : 1;
+}
+
+function handoffAttempt(handoff) {
+  return handoff && Number.isSafeInteger(handoff.attempt) && handoff.attempt >= 1
+    ? handoff.attempt : 1;
+}
+
+function latestVerification(task, criterionId, attempt = null) {
   for (let index = task.verifications.length - 1; index >= 0; index -= 1) {
-    if (task.verifications[index].criterionId === criterionId) return task.verifications[index];
+    const verification = task.verifications[index];
+    if (verification.criterionId === criterionId &&
+        (attempt === null || verificationAttempt(verification) === attempt)) return verification;
   }
   return null;
 }
@@ -223,9 +245,10 @@ function summarizeRecord(record) {
       scope: task.scope,
       files: [...task.files],
       status: task.status,
+      attempt: currentAttempt(task),
       blockReason: task.blockReason,
       acceptanceCriteria: task.acceptanceCriteria.map((criterion) => {
-        const latest = latestVerification(task, criterion.id);
+        const latest = latestVerification(task, criterion.id, currentAttempt(task));
         return {
           id: criterion.id,
           description: criterion.description,
@@ -254,6 +277,7 @@ export async function createRunLedger({
   maxEvents = DEFAULT_MAX_EVENTS,
   maxRecordBytes = DEFAULT_MAX_RECORD_BYTES,
   lockTimeoutMs = 5000,
+  staleLockMs = 30000,
   recoverAllActiveRuns = false,
 } = {}) {
   check(typeof clock === "function", "clock must be a function");
@@ -261,6 +285,7 @@ export async function createRunLedger({
   check(Number.isSafeInteger(maxEvents) && maxEvents >= 10, "maxEvents must be at least 10");
   check(Number.isSafeInteger(maxRecordBytes) && maxRecordBytes >= 4096, "maxRecordBytes must be at least 4096");
   check(Number.isSafeInteger(lockTimeoutMs) && lockTimeoutMs >= 100, "lockTimeoutMs must be at least 100ms");
+  check(Number.isSafeInteger(staleLockMs) && staleLockMs >= 1000, "staleLockMs must be at least 1000ms");
 
   const projectRootReal = await realpath(resolve(projectRoot));
   const directory = resolve(storageDir || resolve(projectRootReal, ".byv-agent", "runs"));
@@ -285,33 +310,117 @@ export async function createRunLedger({
     }
   }
 
+  function processIsAlive(pid) {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch (error) {
+      if (error.code === "ESRCH") return false;
+      // EPERM and unexpected platform errors fail closed: ownership is not disproven.
+      return true;
+    }
+  }
+
+  async function readLockState(path) {
+    try {
+      const info = await lstat(path);
+      if (!info.isFile() || info.isSymbolicLink()) return null;
+      const metadata = JSON.parse(await readFile(path, "utf8"));
+      if (!Number.isSafeInteger(metadata.pid) || metadata.pid <= 0 ||
+          typeof metadata.createdAt !== "string") return null;
+      // Accept the previous P5.2 lock format so a crashed pre-patch process can recover.
+      const token = typeof metadata.token === "string" && metadata.token.length > 0
+        ? metadata.token : "legacy:" + metadata.pid + ":" + metadata.createdAt;
+      return { info, metadata, token };
+    } catch {
+      return null;
+    }
+  }
+
+  async function reclaimStaleLock(lockPath) {
+    const observed = await readLockState(lockPath);
+    if (!observed || Date.now() - observed.info.mtimeMs <= staleLockMs) return false;
+    if (processIsAlive(observed.metadata.pid)) return false;
+
+    // Serialize reclaimers. Without this guard, a second waiter could unlink a new
+    // lock created after the first waiter removes the stale lock.
+    const reaperPath = lockPath + ".reaper";
+    let reaperHandle;
+    try {
+      reaperHandle = await open(reaperPath, "wx", 0o600);
+      await reaperHandle.writeFile(JSON.stringify({
+        pid: process.pid,
+        token: randomBytes(16).toString("hex"),
+        createdAt: new Date().toISOString(),
+      }), "utf8");
+    } catch (error) {
+      if (reaperHandle) {
+        await reaperHandle.close().catch(() => {});
+        reaperHandle = null;
+      }
+      if (error.code === "EEXIST") return false;
+      throw error;
+    }
+
+    try {
+      const current = await readLockState(lockPath);
+      if (!current || current.token !== observed.token ||
+          Date.now() - current.info.mtimeMs <= staleLockMs ||
+          processIsAlive(current.metadata.pid)) return false;
+
+      const quarantinePath = resolve(directory, ".ledger.lock.stale-" + randomBytes(12).toString("hex"));
+      await rename(lockPath, quarantinePath);
+      const quarantined = await readLockState(quarantinePath);
+      if (!quarantined || quarantined.token !== current.token ||
+          processIsAlive(quarantined.metadata.pid)) {
+        // Fail closed. Restore if the lock pathname is still vacant; otherwise leave
+        // the quarantined artifact for operator inspection rather than deleting it.
+        let lockExists = false;
+        try {
+          await lstat(lockPath);
+          lockExists = true;
+        } catch (error) {
+          if (error.code !== "ENOENT") throw error;
+        }
+        if (!lockExists) await rename(quarantinePath, lockPath).catch(() => {});
+        return false;
+      }
+      await unlink(quarantinePath);
+      return true;
+    } finally {
+      await reaperHandle.close().catch(() => {});
+      await unlink(reaperPath).catch(() => {});
+    }
+  }
+
   async function withFileLock(operation) {
     await ensureSafeDirectory();
     const lockPath = resolve(directory, ".ledger.lock");
     const started = Date.now();
     let handle;
+    let ownToken;
     while (!handle) {
+      ownToken = randomBytes(16).toString("hex");
       try {
         handle = await open(lockPath, "wx", 0o600);
-        await handle.writeFile(JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }), "utf8");
+        await handle.writeFile(JSON.stringify({
+          pid: process.pid,
+          ownerInstanceId: instanceId,
+          token: ownToken,
+          createdAt: new Date().toISOString(),
+        }), "utf8");
       } catch (error) {
         if (handle) {
           await handle.close().catch(() => {});
           handle = null;
+          // We successfully created the path but could not initialize our metadata.
+          await unlink(lockPath).catch(() => {});
         }
         if (error.code !== "EEXIST") throw error;
-        try {
-          const info = await stat(lockPath);
-          if (Date.now() - info.mtimeMs > 30000) {
-            await unlink(lockPath).catch(() => {});
-            continue;
-          }
-        } catch (statError) {
-          if (statError.code === "ENOENT") continue;
-          throw statError;
-        }
+        const reclaimed = await reclaimStaleLock(lockPath);
+        if (reclaimed) continue;
         if (Date.now() - started >= lockTimeoutMs) {
-          fail("Ledger is busy: timed out waiting for the exclusive write lock");
+          fail("Ledger is busy: timed out waiting for the exclusive write lock. The owner may still be active or its state cannot be verified; inspect stale lock files only after stopping all ledger processes.");
         }
         await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));
       }
@@ -320,7 +429,8 @@ export async function createRunLedger({
       return await operation();
     } finally {
       await handle.close().catch(() => {});
-      await unlink(lockPath).catch(() => {});
+      const current = await readLockState(lockPath);
+      if (current && current.token === ownToken) await unlink(lockPath).catch(() => {});
     }
   }
 
@@ -436,17 +546,24 @@ export async function createRunLedger({
         record.status = "interrupted";
         record.recoveryCount = (record.recoveryCount || 0) + 1;
         const blockedTaskIds = [];
+        const blockedTaskAttempts = [];
         for (const task of record.tasks) {
           if (task.status === "IN_PROGRESS") {
+            // A process interruption makes the in-flight attempt's outcome unknown.
+            // Retain its evidence as history, but start a fresh attempt before any
+            // resumed work can satisfy REVIEW/DONE gates.
+            task.attempt = currentAttempt(task) + 1;
             task.status = "BLOCKED";
             task.blockReason = "Recovered after control-plane restart; previous execution outcome is unknown.";
             task.updatedAt = timestamp(clock);
             blockedTaskIds.push(task.taskId);
+            blockedTaskAttempts.push({ taskId: task.taskId, attempt: task.attempt });
           }
         }
         addEvent(record, "run.interrupted", {
           reason: "control-plane-restart",
           inFlightTasksMarkedBlocked: blockedTaskIds,
+          recoveredTaskAttempts: blockedTaskAttempts,
         }, clock, maxEvents);
         await writeRun(record);
         recoveredCount += 1;
@@ -574,17 +691,25 @@ export async function createRunLedger({
         }
       }
       if (status === "REVIEW") {
-        check(task.handoff, "Task cannot enter REVIEW before a handoff is recorded");
-        check(task.verifications.length > 0, "Task cannot enter REVIEW before verification evidence is recorded");
+        check(task.handoff && handoffAttempt(task.handoff) === currentAttempt(task),
+          "Task cannot enter REVIEW before a handoff for the current attempt is recorded");
+        check(task.verifications.some((item) => verificationAttempt(item) === currentAttempt(task)),
+          "Task cannot enter REVIEW before verification evidence for the current attempt is recorded");
       }
       if (status === "DONE") {
-        check(task.handoff, "Task cannot become DONE before a handoff is recorded");
+        check(task.handoff && handoffAttempt(task.handoff) === currentAttempt(task),
+          "Task cannot become DONE before a handoff for the current attempt is recorded");
         const pending = task.acceptanceCriteria.filter((criterion) => {
-          const latest = latestVerification(task, criterion.id);
+          const latest = latestVerification(task, criterion.id, currentAttempt(task));
           return !latest || latest.outcome !== "PASS" || latest.executed !== true;
         });
         check(pending.length === 0, "Task cannot become DONE; acceptance criteria are not all verified PASS: " +
           pending.map((criterion) => criterion.id).join(", "));
+      }
+      if (from === "REVIEW" && status === "IN_PROGRESS") {
+        // Rework starts a new attempt. Existing evidence stays in history but no
+        // longer satisfies the completion gates for this attempt.
+        task.attempt = currentAttempt(task) + 1;
       }
       task.status = status;
       task.blockReason = status === "BLOCKED" ? normalizedReason : null;
@@ -593,6 +718,7 @@ export async function createRunLedger({
         taskId: task.taskId,
         from,
         to: status,
+        attempt: currentAttempt(task),
         reason: status === "BLOCKED" ? normalizedReason : "",
       }, clock, maxEvents);
       await writeRun(record);
@@ -615,10 +741,12 @@ export async function createRunLedger({
       const task = record.tasks.find((item) => item.taskId === taskId);
       check(task, "Task not found in run: " + taskId);
       check(task.status === "IN_PROGRESS", "Handoff can only be recorded for an IN_PROGRESS task");
+      handoff.attempt = currentAttempt(task);
       task.handoff = handoff;
       task.updatedAt = timestamp(clock);
       addEvent(record, "task.handoff-recorded", {
         taskId,
+        attempt: handoff.attempt,
         changedFileCount: handoff.changedFiles.length,
         unresolvedRiskCount: handoff.unresolvedRisks.length,
         evidenceRefCount: handoff.evidenceRefs.length,
@@ -648,6 +776,7 @@ export async function createRunLedger({
         "Verification can only be recorded while a task is IN_PROGRESS or REVIEW");
       check(task.acceptanceCriteria.some((criterion) => criterion.id === verification.criterionId),
         "Verification criterionId does not belong to the task");
+      verification.attempt = currentAttempt(task);
       verification.recordedAt = timestamp(clock);
       task.verifications.push(verification);
       check(task.verifications.length <= 500, "Task verification history limit reached");
@@ -657,6 +786,7 @@ export async function createRunLedger({
         criterionId: verification.criterionId,
         outcome,
         executed,
+        attempt: verification.attempt,
       }, clock, maxEvents);
       await writeRun(record);
       return summarizeRecord(record);

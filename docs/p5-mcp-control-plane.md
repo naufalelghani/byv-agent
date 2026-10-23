@@ -10,8 +10,8 @@
 - `scripts/byv-mcp-server.mjs` implements JSON-RPC initialization, `tools/list`, and `tools/call` over newline-delimited stdio. Stdout is reserved for protocol messages; diagnostic output is written to stderr.
 - `scripts/byv-run-ledger-core.mjs` stores versioned run snapshots as JSON in `.byv-agent/runs/` under the active project directory. Files are ignored by Git.
 - Each run pins the validated registry snapshot, its generation/digest, provider-profile ID, endpoint host, protocol, model ID, selected execution-mode label, and a credential-source category. The ledger never stores API-key/token values.
-- Ledger writes use an exclusive lock and atomic temporary-file rename. Storage and task file-boundary paths are checked for containment; symlinked ledger directories are rejected. Run records, task counts, event history, field lengths, and retention are bounded.
-- On control-plane startup, an active run left by a prior process is marked `interrupted`; tasks that were `IN_PROGRESS` become `BLOCKED` with an explicit unknown-outcome reason. Resume is explicit and never fabricates a successful result.
+- Ledger writes use an exclusive lock and atomic temporary-file rename. Aged locks are reclaimed only after the recorded owner PID is confirmed dead, with reapers serialized to avoid unlinking a replacement lock. If ownership cannot be verified, the ledger fails closed; inspect/remove stale lock artifacts only after stopping all ledger processes. Storage and task file-boundary paths are checked for containment; symlinked ledger directories are rejected. Run records, task counts, event history, field lengths, and retention are bounded.
+- On control-plane startup, an active run left by a prior process is marked `interrupted`; tasks that were `IN_PROGRESS` become `BLOCKED` with an explicit unknown-outcome reason and their attempt counter advances. Existing handoff/verification remains in history but cannot satisfy completion gates for the new attempt. Resume is explicit and never fabricates a successful result.
 - Task-state transitions and completion gates are enforced. A task cannot become `DONE` unless it has a handoff plus a latest, actually-executed `PASS` result for every acceptance criterion.
 
 ## MCP tools
@@ -38,10 +38,12 @@ The MCP server is a control plane, not an agent transport. `byv_prepare_agent` r
 - One run has one plan. Replacing an existing plan is rejected.
 - Task IDs and acceptance-criterion IDs must be unique within their respective scopes. Dependencies must exist and be acyclic.
 - Owners must be enabled agents in the registry snapshot pinned to the run.
-- `TODO -> READY` requires dependencies to be `DONE`; `READY -> IN_PROGRESS` records real task start; `IN_PROGRESS -> REVIEW` requires a handoff and verification evidence; `REVIEW -> DONE` requires a handoff and a latest executed `PASS` for every criterion.
+- `TODO -> READY` requires dependencies to be `DONE`; `READY -> IN_PROGRESS` records task start; `IN_PROGRESS -> REVIEW` requires a handoff and verification evidence from the current task attempt; `REVIEW -> DONE` requires a current-attempt handoff and an executed `PASS` for every criterion from that same attempt.
+- `REVIEW -> IN_PROGRESS` starts a new attempt. Recovery of a run with an `IN_PROGRESS` task likewise advances that task's attempt before marking it `BLOCKED`. Earlier verification results remain tagged with their original attempt and do not satisfy the new attempt's completion gates; the previous handoff remains visible until replaced by a fresh handoff.
+- After recovery and explicit resume, a task must be re-evaluated and re-executed. A current-attempt handoff and executed `PASS` verification are required before it can enter `REVIEW` and then `DONE`.
 - Any non-terminal task may become `BLOCKED` with a reason. `BLOCKED -> READY` is allowed only after dependencies are complete.
 - Verification records require a command, outcome, and explicit `executed` flag. The server records caller-reported evidence; it does not execute the submitted command and does not independently attest to the truth of model-authored claims.
-- Handoff and verification inputs are length-limited and known token patterns are redacted before persistence. Do not send raw transcripts, full command output, secrets, or credentials to MCP tools.
+- Handoff and verification inputs are length-limited; common token patterns and quoted or unquoted secret-like key-value fields (including JSON fields) are redacted before persistence. Redaction is best-effort, not a guarantee that arbitrary secrets or transcripts are safe to submit. Do not send raw transcripts, full command output, secrets, or credentials to MCP tools.
 
 ## Local storage and configuration
 
