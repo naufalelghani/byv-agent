@@ -1,0 +1,14 @@
+{
+  "name": "byv-agent",
+  "owner": { "name": "BYV Agentic" },
+  "metadata": {
+    "description": "BYV autonomous multi-agent development plugin marketplace",
+    "version": "0.1.0"
+  },
+  "plugins": [{
+    "name": "byv-agent",
+    "source": "./",
+    "description": "Autonomous planning, backend, frontend, security, and QA team for Claude Code.",
+    "version": "0.1.0"
+  }]
+}
