@@ -36,7 +36,7 @@ function validateTaskPayload(value) {
     "taskPayload.acceptanceCriteria must be a non-empty array of non-empty strings",
   );
 
-  const relevantContext = value.relevantContext ?? [];
+  const relevantContext = Object.hasOwn(value, "relevantContext") ? value.relevantContext : [];
   check(
     Array.isArray(relevantContext) &&
       relevantContext.every((item) => typeof item === "string" && item.trim().length > 0),
