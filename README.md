@@ -13,6 +13,14 @@ The lead agent coordinates planning, implementation, integration, independent QA
 /byv-agent:autonomous Build a web app with authentication, role-based access, responsive UI, API tests, and security QA.
 ```
 
+## Frontend design skills (bundled)
+
+The Frontend Engineer includes two plugin skills:
+- `frontend-design` — design process, visual hierarchy, responsive implementation, accessibility, and interaction states.
+- `ui-ux-pro-max` — structured selection/review of visual direction, design tokens, palettes, typography, layout, and UX.
+
+They live in the plugin's `skills/` directory and are available when the plugin is installed. **No separate skill installation or manual setup is required.** The Frontend Engineer is instructed to load them for relevant UI tasks. They are used as contextual guidance, not as rigid templates; project requirements and accessibility take precedence.
+
 ## Install from this GitHub marketplace
 
 In Claude Code:
@@ -50,6 +58,11 @@ agents/
   backend-engineer.md
   frontend-engineer.md
   security-qa.md
+skills/
+  frontend-design/
+    SKILL.md
+  ui-ux-pro-max/
+    SKILL.md
 commands/
   autonomous.md
 LICENSE
