@@ -16,13 +16,16 @@ Implement the Agent Registry lifecycle for BYV Agent: define and validate agent 
 
 ## Current overall status
 
-**Current phase: P5.1 — REVIEW**  
-**Completed phases: P0 — DONE; P1 — DONE; P2 — DONE; P3 — DONE; P4 — DONE**  
-**Current branch: `feat/p5-1-api-first-runtime-mapping`**  
-**P5 design: [docs/p5-runtime-orchestration.md](../docs/p5-runtime-orchestration.md), merged through [PR #7](https://github.com/naufalelghani/byv-agent/pull/7)**  
-**Latest merged PR: [#7 — docs(P5): design API-first runtime orchestration](https://github.com/naufalelghani/byv-agent/pull/7)**
+**Current phase: P5.2 — REVIEW (implementation branch; PR not yet opened)**  
+**Completed phases: P0 — DONE; P1 — DONE; P2 — DONE; P3 — DONE; P4 — DONE; P5.1 — DONE**  
+**Current branch: `feat/p5-2-mcp-control-plane-ledger`**  
+**P5 design:** [docs/p5-runtime-orchestration.md](../docs/p5-runtime-orchestration.md), merged through [PR #7](https://github.com/naufalelghani/byv-agent/pull/7)  
+**P5.1:** merged through [PR #8](https://github.com/naufalelghani/byv-agent/pull/8), merge commit `f902a4122f7fbba9da44360497e1be348f264715)  
+**P5.2 implementation:** see [docs/p5-mcp-control-plane.md](../docs/p5-mcp-control-plane.md); this implementation branch adds the local MCP control plane, versioned durable task ledger, recovery, and control-plane tests. CI and review are pending.
 
-P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 was squash-merged through PR #4 into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`. GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665) passed registry validation and all 18 tests. The user also verified the same 18 tests locally on Windows PowerShell, with 0 failures. P3 was squash-merged through PR #5 into `main` at `dffd293f33a06a769303aef46f3d323dfa3c1594`. GitHub Actions run [39979200629](https://github.com/naufalelghani/byv-agent/actions/runs/39979200629) passed all 29 tests, and the user verified the same 29 tests passed locally on Windows PowerShell. P3 validates message envelopes and prepares a delivery plan; actual message dispatch and task-state persistence are not included. P4 was squash-merged through PR #6 into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`. GitHub Actions run [39980441173](https://github.com/naufalelghani/byv-agent/actions/runs/39980441173) passed registry validation and all 37 tests (37 passed, 0 failed), and the user verified the same 37 tests locally on Windows PowerShell. P4 adds a process-local manager for validated, serialized reloads, preserves active state on failures, records bounded audit events, and adds a candidate preflight CLI. P5 design is merged through PR #7 at `f09db218a0b8e7aa56364cfaffc69b0acd841457`. P5.1 implementation is under review in [PR #8](https://github.com/naufalelghani/byv-agent/pull/8). GitHub Actions run [39988654325](https://github.com/naufalelghani/byv-agent/actions/runs/39988654325) passed registry validation, provider profile validation, and all 49 tests (49 passed, 0 failed). Schema v1.1.0 adds explicit runtime mapping, API-only environment preflight and provider profile metadata validators, and Sam/Morgan tool allowlists are aligned with registry intent. This phase does not yet spawn agents, contact model endpoints, or prove third-party provider compatibility.
+P0–P4 are complete and merged. P3 validates inter-agent message envelopes but does not implement transport. P4 implements a process-local transactional registry manager. P5.1 adds registry schema v1.1.0 runtime mappings, the API-only preflight, secret-free provider profile metadata validation, and aligned Sam/Morgan tool allowlists. P5.1 local checks and GitHub Actions reported 49 passed, 0 failed before PR #8 was squash-merged. P5.1 does not spawn agents or establish arbitrary third-party model compatibility.
+
+P5.2 provides a local stdio MCP server and durable project-scoped run/task ledger. The ledger pins registry/provider/model metadata, enforces task transitions and acceptance evidence gates, persists handoffs/verifications, redacts common secret patterns, uses atomic writes and an exclusive write lock, bounds records/retention, and marks in-flight tasks BLOCKED with unknown outcome after an interrupted run. P5.2 does not spawn native Agent Teams or custom agents; those remain P5.3. Local 9Router/model-specific compatibility, streaming and full agentic behavior remain P5.4 verification work.
 
 ## Phases
 
@@ -142,36 +145,57 @@ P5 mandatory constraint: BYV must support Claude Code CLI using explicit API cre
 
 #### P5.1 — API-First Configuration & Runtime Mapping
 
-**Status: IN PROGRESS**
+**Status: DONE**
 
-Implemented on `feat/p5-1-api-first-runtime-mapping`:
-- `agents/registry.schema.json` and `agents/registry.json` upgraded to schema `1.1.0`; each agent carries a strict `runtime` mapping (Byval is primary session; workers map to bundled custom-agent definitions).
-- `scripts/agent-runtime-mapping-core.mjs` verifies registry mappings against profile frontmatter and fails closed on definition mismatch and obvious tool-allowlist/registry permission conflicts. This is a configuration consistency check, not a host security sandbox.
-- `scripts/byv-runtime-doctor.mjs` inspects API-only env configuration without contacting endpoints or printing credential values.
-- `config/provider-profiles.schema.json`, `config/provider-profiles.example.json`, `scripts/provider-profile-core.mjs`, and `scripts/validate-provider-profiles.mjs` define and validate non-secret provider profile metadata.
-- Bootstrap packets now include the selected agent's runtime mapping.
-- Sam's profile no longer allows Write/Edit. Morgan's profile no longer allows Bash and explicitly asks Byval/authorized runner to execute commands; Morgan does not claim test execution without actual output.
-- `docs/p5-api-first-configuration.md` documents direct API/gateway environment setup and compatibility labels; CI includes provider metadata validation and P5.1 tests.
+Implemented and squash-merged through [PR #8](https://github.com/naufalelghani/byv-agent/pull/8) at `f902a4122f7fbba9da44360497e1be348f264715`:
+- Registry schema v1.1.0 carries explicit runtime mappings from the five registry IDs to the primary session/custom-agent definitions.
+- Runtime mapping validation checks profile frontmatter and rejects declared read-only/shell-deny tool allowlist conflicts.
+- `scripts/byv-runtime-doctor.mjs --api-only` checks explicit credentials, endpoint/protocol/model config and redacts secrets without sending network requests.
+- Provider-profile schema/example/validator define secret-free metadata; bootstrap output includes runtime mapping.
+- Sam and Morgan tool allowlists were aligned with their declared policies.
+- Documentation and CI include P5.1 verification.
 
-P5.1 boundary: this work validates configuration and runtime mapping only. The doctor makes no model request, can't prove the actual running Claude Code credential source or provider billing, and cannot make unsupported models compatible. Those require the P5.4 live smoke/compatibility tests. Native runtime dispatch and durable run ledger are P5.2–P5.3.
+Acceptance evidence:
+- [x] Registry and provider profile validators passed.
+- [x] Unit suite passed: 49 passed, 0 failed.
+- [x] GitHub Actions for PR head `4715e89fa0c64d796a6afa1e8f23531c7b0462d7` passed: [run 39988829084](https://github.com/naufalelghani/byv-agent/actions/runs/39988829084).
+- [x] User tested the API-only gateway setup through local 9Router with one text request and Read-tool calls; those tests are smoke evidence, not full protocol certification.
+- [x] PR #8 merged to `main`.
 
-Acceptance criteria (CI passed; PR review pending):
-- [x] Registry schema v1.1.0 mappings validate against actual worker profile names.
-- [x] Sam and Morgan profile tool allowlists match declared read-only/shell-deny intent.
-- [x] API-only doctor fails closed without explicit credential configuration and redacts all secret values.
-- [x] Custom endpoints require explicit protocol, credential, and model ID; unsafe URL credentials and non-loopback HTTP are rejected.
-- [x] Provider profile metadata schema/example passes validator; secret-bearing fields are rejected.
-- [x] Bootstrap packet includes runtime mapping.
-- [x] The P0–P4 regression suite and new P5.1 tests pass in CI — run [39988654325](https://github.com/naufalelghani/byv-agent/actions/runs/39988654325): 49 passed, 0 failed.
-- [x] Documentation makes clear that preflight is not live provider verification.
-- [ ] PR #8 reviewed and merged.
+Boundary: P5.1 preflight does not contact a provider or independently prove the credential source. Third-party model streaming, broader tool use, and real agent dispatch are not certified by this phase.
+
+#### P5.2 — MCP Control Plane & Durable Run Ledger
+
+**Status: REVIEW**
+
+Implementation branch: `feat/p5-2-mcp-control-plane-ledger`.
+
+Implemented on the review branch:
+- `.mcp.json` registers a local stdio MCP server for the plugin.
+- `scripts/byv-mcp-server.mjs` implements MCP initialization, tool listing/calls, registry status/reload, runtime preflight, bootstrap preparation, and run/task evidence tools.
+- `scripts/byv-run-ledger-core.mjs` stores versioned run snapshots beneath the active project’s `.byv-agent/runs/`, uses atomic replacement and an exclusive lock, confines storage and declared file boundaries, bounds records/history/retention, and redacts common token patterns.
+- Runs pin registry generation/digest and a full validated registry snapshot together with non-secret provider/model metadata.
+- Task plans reject unknown dependencies and cycles. State transitions require dependencies, handoffs, and executed PASS evidence for every criterion before DONE.
+- Startup recovery changes abandoned active runs to INTERRUPTED and in-flight tasks to BLOCKED with unknown outcome; resumption is explicit.
+- `tests/byv-control-plane.test.mjs` covers persistence, transitions, task dependencies, recovery, path containment, redaction, concurrent creation, MCP protocol contracts and API-preflight gating.
+- `docs/p5-mcp-control-plane.md` describes tool contracts and security boundaries; CI runs the P5.2 tests.
+
+Acceptance checklist:
+- [x] MCP server implementation and plugin registration are present on the branch.
+- [x] Durable ledger, atomic writes, bounded history/retention, path containment and interrupted-run recovery are implemented.
+- [x] Task transition and acceptance-evidence gates are implemented.
+- [x] Tests and documentation are added.
+- [ ] CI passes on the final PR head.
+- [ ] User/maintainer review and PR merge.
+- [ ] Verify the MCP server launches under the user's Claude Code version using `/mcp` and test the exposed control-plane tools.
+- [ ] P5.3 native runtime dispatch and P5.4 provider compatibility remain separate phases.
 
 ## Resume instructions for a future session
 
 1. Read this file first: `task/ROADMAP.md`.
 2. Check the current branch and PR status in GitHub.
 3. Do not assume a status is complete without checking its acceptance checklist and actual test results.
-4. Review and merge PR #8 when its current head CI is green; then begin P5.2 MCP control plane and durable run ledger.
+4. Finish review of P5.2 branch/PR and verify its final CI head. Merge only after review; then begin P5.3 native runtime integration.
 
 ## Progress log
 
@@ -196,3 +220,7 @@ Acceptance criteria (CI passed; PR review pending):
 - 2026-10-24 — P5 design approved and merged through PR #7 at `f09db218a0b8e7aa56364cfaffc69b0acd841457`. Began P5.1 API-first runtime mapping: schema v1.1.0, agent-definition mappings, API-only configuration doctor, provider metadata schema/validator, bootstrap runtime mapping, and reduced Sam/Morgan tool allowlists. No live provider call or runtime spawn is claimed.
 
 - 2026-10-24 — P5.1 opened as PR #8. GitHub Actions run [39988654325](https://github.com/naufalelghani/byv-agent/actions/runs/39988654325) passed registry/provider validation and all 49 tests; moved P5.1 to REVIEW. Provider profile ID remains diagnostic-only until P5.2 wires profile loading into the runtime.
+
+
+- 2026-10-24 — P5.1 PR #8 squash-merged into `main` at `f902a4122f7fbba9da44360497e1be348f264715` after 49/49 tests and local API-first/Read-tool smoke tests. Provider streaming and native agent dispatch were not certified.
+- 2026-10-24 — Started P5.2 on `feat/p5-2-mcp-control-plane-ledger`: added the bundled stdio MCP control plane, registry status/reload and bootstrap preparation tools, API preflight reporting, durable project-scoped run/task ledger, interruption recovery, enforced task transitions/evidence gates, tests, docs, plugin MCP registration and CI coverage. Final branch CI and PR review are pending.
