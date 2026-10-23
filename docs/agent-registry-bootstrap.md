@@ -5,7 +5,7 @@
 
 ## Purpose
 
-The registry is the canonical catalog for agent identity, role, capabilities, profile path, delegation policy, and declared permissions. A registry entry is metadata; it is not an agent runtime, permission enforcement mechanism, or communication transport.
+The registry is the canonical catalog for agent identity, role, capabilities, profile path, delegation policy, declared permissions, and runtime mapping. A registry entry is metadata; it is not itself an agent runtime, permission enforcement mechanism, or communication transport. Registry schema v1.1.0 maps worker IDs to explicit Claude Code custom-agent definition names; Byval is mapped to the primary session.
 
 The bootstrap helper now validates the registry and resolves a requested identity into a structured startup packet. It prepares the context for a host to inject, but it does not automatically spawn a Claude Code teammate or apply operating-system security controls.
 
@@ -64,6 +64,7 @@ The JSON packet includes the following sections:
 - `profile`: registered profile path and loaded profile contents, or `null` if no profile is registered.
 - `permissions`: declared source, shell, and network access, plus a reminder that host policy remains authoritative.
 - `delegation`: the selected agent's own delegation declaration.
+- `runtime`: the validated runtime provider/kind and, for workers, the mapped custom-agent definition name.
 - `runtimeBoundary`: an explicit statement of what this helper does not enforce.
 
 ## Permission semantics
@@ -78,7 +79,7 @@ If the host cannot enforce a declared boundary, Byval must constrain the task op
 
 ## Current capability boundary
 
-P1 provides local registry validation, agent/profile resolution, delegation-policy checks, and JSON startup packet generation. Actual runtime spawning, automatic startup-context injection, inter-agent messaging, dynamic registry reload, and host-enforced permission boundaries are not implemented by this document or helper; they depend on host/orchestrator capabilities and future project phases.
+P1 provides local registry validation, agent/profile resolution, delegation-policy checks, runtime-mapping validation (added in P5.1), and JSON startup packet generation. Actual runtime spawning, automatic startup-context injection, inter-agent messaging, dynamic registry reload, and host-enforced permission boundaries are not implemented by this document or helper; they depend on host/orchestrator capabilities and future project phases.
 
 ## Shared delegation/task validation (P2)
 
