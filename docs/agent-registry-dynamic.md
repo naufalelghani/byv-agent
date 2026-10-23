@@ -1,6 +1,6 @@
 # P4 — Dynamic Registry
 
-**Status:** Implementation on review branch; no disk mutation or process-wide singleton is introduced by this phase.
+**Status:** P4 — DONE; merged through [PR #6](https://github.com/naufalelghani/byv-agent/pull/6) into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`. No disk mutation or process-wide singleton is introduced by this phase.
 
 ## Purpose and boundaries
 
@@ -62,3 +62,8 @@ node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs tests/d
 ```
 
 Automated tests cover successful activation, validation failure preserving the last valid state, concurrent reload ordering, unchanged candidates, detached snapshots, bounded audit history, and candidate CLI behavior.
+
+
+## Merge and verification record
+
+PR [#6](https://github.com/naufalelghani/byv-agent/pull/6) was squash-merged into `main` at `288d1fda0b5eac9749e89a305a0d0388566adf7d`. GitHub Actions run [39980441173](https://github.com/naufalelghani/byv-agent/actions/runs/39980441173) and user-run Windows PowerShell verification both passed all 37 tests.
