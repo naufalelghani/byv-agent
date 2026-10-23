@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import { loadValidatedRegistry, REPOSITORY_ROOT } from "../scripts/agent-registry-core.mjs";
 import { createRunLedger, redactText } from "../scripts/byv-run-ledger-core.mjs";
 import { createByvControlPlane, handleMcpRequest } from "../scripts/byv-mcp-server.mjs";
@@ -340,6 +341,79 @@ test("MCP begin-run tool fails closed if API-only preflight is blocked", async (
       /API-only preflight is blocked/,
     );
     assert.equal((await control.ledger.listRuns()).length, 0);
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("an active run continues to use its pinned registry after a successful reload", async () => {
+  const projectRoot = await createTempProject();
+  try {
+    const control = await createByvControlPlane({
+      pluginRoot,
+      projectRoot,
+      env: {
+        ANTHROPIC_BASE_URL: "http://localhost:20128/v1",
+        ANTHROPIC_AUTH_TOKEN: "sk-test-token-for-pinned-snapshot",
+        ANTHROPIC_MODEL: "byv-flash-2410",
+        BYV_PROVIDER_PROTOCOL: "anthropic-messages",
+      },
+    });
+    const run = await control.callTool("byv_begin_run", { executionMode: "sequential" });
+    const pinned = (await control.ledger.getRun(run.runId)).registry.snapshot;
+    const priorDescription = pinned.agents.find((agent) => agent.id === "sam").description;
+    const candidate = structuredClone(control.registryManager.getSnapshot().registry);
+    candidate.agents.find((agent) => agent.id === "sam").description = "Reloaded description for future runs only";
+    const active = await control.registryManager.reload(candidate, { source: "unit-test" });
+    assert.equal(active.generation, 2);
+    assert.notEqual(
+      active.registry.agents.find((agent) => agent.id === "sam").description,
+      priorDescription,
+    );
+
+    const packet = await control.callTool("byv_prepare_agent", {
+      runId: run.runId,
+      agentId: "sam",
+      parentAgentId: "byval",
+      task: "Review a small planning task",
+      expectedOutput: "A concise plan",
+      acceptanceCriteria: ["Include a testable outcome"],
+    });
+    assert.equal(packet.agent.description, priorDescription);
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("bundled stdio server emits only valid JSON-RPC messages on stdout", async () => {
+  const projectRoot = await createTempProject();
+  try {
+    const serverPath = resolve(pluginRoot, "scripts/byv-mcp-server.mjs");
+    const input = [
+      JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26" } }),
+      JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" }),
+    ].join("\n") + "\n";
+    const result = spawnSync(process.execPath, [serverPath], {
+      cwd: projectRoot,
+      input,
+      encoding: "utf8",
+      timeout: 10000,
+      env: {
+        ...process.env,
+        BYV_PLUGIN_ROOT: pluginRoot,
+        BYV_PROJECT_ROOT: projectRoot,
+      },
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.equal(result.stderr, "");
+    const lines = result.stdout.trim().split(/\r?\n/);
+    assert.equal(lines.length, 2, "expected one JSON-RPC response per request");
+    const first = JSON.parse(lines[0]);
+    const second = JSON.parse(lines[1]);
+    assert.equal(first.id, 1);
+    assert.equal(first.result.serverInfo.name, "byv-control-plane");
+    assert.equal(second.id, 2);
+    assert.ok(second.result.tools.some((tool) => tool.name === "byv_begin_run"));
   } finally {
     await rm(projectRoot, { recursive: true, force: true });
   }
