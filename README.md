@@ -61,7 +61,7 @@ Choose Auto mode and the highest effort supported by the selected model (for exa
 
 BYV Agent is designed to run from Claude Code CLI with explicit API credentials or an LLM gateway, without requiring a claude.ai subscription login. For third-party endpoints, Claude Code must receive the Anthropic Messages API protocol; other API formats require a tested translation gateway. Third-party model compatibility is best-effort and must be verified per provider/model.
 
-See [P5 API-first configuration](docs/p5-api-first-configuration.md) for environment setup and [P5 runtime orchestration design](docs/p5-runtime-orchestration.md) for the planned runtime control plane. The configuration doctor reports environment readiness only; it does not contact a provider or prove that a live session used the specified credentials.
+See [P5 API-first configuration](docs/p5-api-first-configuration.md) for environment setup, [P5 runtime orchestration design](docs/p5-runtime-orchestration.md) for the staged runtime plan, and [P5.2 MCP control plane](docs/p5-mcp-control-plane.md) for the local MCP tools and durable run/task ledger. The bundled `.mcp.json` registers a stdio control-plane server when the plugin is loaded. The configuration doctor reports environment readiness only; it does not contact a provider or prove that a live session used the specified credentials.
 
 ## Repository structure
 
