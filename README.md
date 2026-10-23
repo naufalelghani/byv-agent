@@ -57,29 +57,49 @@ claude --enable-auto-mode
 
 Choose Auto mode and the highest effort supported by the selected model (for example, `/effort max`, if available). Auto mode is not a blanket permission bypass. Use an isolated worktree/repository, review diffs, and avoid exposing production credentials.
 
-## Structure
+## Repository structure
 
+The repository is organized as a Claude Code plugin. The tree below shows the main files and representative bundled skills (the `skills/` directory contains additional specialist skills):
+
+```text
+byv-agent/
+├── .claude-plugin/
+│   ├── plugin.json          # Plugin metadata
+│   └── marketplace.json     # Marketplace listing
+├── agents/
+│   ├── planning-research.md # Sam
+│   ├── backend-engineer.md  # Jarvis
+│   ├── frontend-engineer.md # Chloe
+│   ├── security-qa.md       # Morgan
+│   └── registry.json        # Agent metadata/capability declarations
+├── commands/
+│   └── autonomous.md        # /byv-agent:autonomous workflow
+├── docs/
+│   ├── agent-identity-collaboration-protocol.md
+│   └── agent-registry-bootstrap.md
+├── skills/
+│   ├── accessibility-audit/
+│   │   └── SKILL.md
+│   ├── api-contract-design/
+│   │   └── SKILL.md
+│   ├── context7/
+│   │   └── SKILL.md
+│   ├── frontend-design/
+│   │   └── SKILL.md
+│   ├── regression-testing/
+│   │   └── SKILL.md
+│   └── ...                 # Other task-specific skills
+├── LICENSE
+└── README.md
 ```
-.claude-plugin/
-  plugin.json
-  marketplace.json
-agents/
-  planning-research.md
-  backend-engineer.md
-  frontend-engineer.md
-  security-qa.md
-skills/
-  frontend-design/
-    SKILL.md
-  ui-ux-pro-max/
-    SKILL.md
-  context7/
-    SKILL.md
-commands/
-  autonomous.md
-LICENSE
-README.md
-```
+
+### What each directory does
+
+- **`.claude-plugin/`** — plugin and marketplace metadata used for discovery and installation.
+- **`agents/`** — specialist role prompts and the agent metadata registry. The registry documents identities and capabilities; it does not itself implement runtime spawning, message transport, or permission enforcement.
+- **`commands/`** — slash-command workflows. The autonomous command guides Byval's planning, delegation, integration, and verification process.
+- **`docs/`** — collaboration protocol and registry/bootstrap contract documentation.
+- **`skills/`** — reusable task guidance, each skill defined by a `SKILL.md`. Skills are contextual instructions, not a substitute for runtime tools or permissions.
 
 ## Notes
 
