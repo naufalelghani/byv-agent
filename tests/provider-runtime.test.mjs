@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
@@ -177,12 +177,12 @@ test("runtime mapping rejects read-only and shell-denied tool allowlist conflict
     }],
   };
   try {
-    await writeFile(profilePath, "---\\nname: planning-research\\ndescription: test\\ntools: Read, Write\\n---\\nTest profile\\n", "utf8");
+    await writeFile(profilePath, "---\nname: planning-research\ndescription: test\ntools: Read, Write\n---\nTest profile\n", "utf8");
     await assert.rejects(
       validateAgentRuntimeMappings({ registry: base, root: rootDir }),
       /Read-only agent "sam" has write-capable tool/,
     );
-    await writeFile(profilePath, "---\\nname: planning-research\\ndescription: test\\ntools: Read, Bash\\n---\\nTest profile\\n", "utf8");
+    await writeFile(profilePath, "---\nname: planning-research\ndescription: test\ntools: Read, Bash\n---\nTest profile\n", "utf8");
     await assert.rejects(
       validateAgentRuntimeMappings({ registry: base, root: rootDir }),
       /shell: deny but profile allows Bash/,
