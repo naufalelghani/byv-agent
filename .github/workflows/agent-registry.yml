@@ -22,6 +22,7 @@ on:
       - "feat/**"
     paths:
       - "agents/**"
+      - "config/**"
       - "scripts/**"
       - "tests/**"
       - "docs/agent-registry-bootstrap.md"
@@ -41,7 +42,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Validate agent registry
+      - name: Validate agent registry and runtime mappings
         run: node scripts/validate-agent-registry.mjs
+      - name: Validate provider profile metadata
+        run: node scripts/validate-provider-profiles.mjs
       - name: Run agent registry, bootstrap, delegation, messaging, runtime, and provider tests
-        run: node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs tests/delegation-validation.test.mjs tests/agent-message.test.mjs tests/registry-runtime.test.mjs tests/provider-runtime.test.mjs
+        run: node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs tests/delegation-validation.test.mjs tests/agent-message.test.mjs tests/registry-runtime.test.mjs tests/provider-runtime.test.mjs tests/provider-runtime.test.mjs
