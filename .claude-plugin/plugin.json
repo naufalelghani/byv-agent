@@ -1,0 +1,6 @@
+{
+  "name": "byv-agent",
+  "version": "0.1.0",
+  "description": "Autonomous Claude Code team for planning, backend, frontend, security, and QA.",
+  "author": { "name": "BYV Agentic" }
+}
