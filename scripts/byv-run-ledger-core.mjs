@@ -71,7 +71,7 @@ function runFileName(runId) {
   return validateRunId(runId) + ".json";
 }
 
-function redactText(value) {
+export function redactText(value) {
   return String(value)
     .replace(/(authorization\s*:\s*bearer\s+)[^\s,;]+/gi, "$1[REDACTED]")
     .replace(/\bBearer\s+[A-Za-z0-9._~+\/-]{12,}/gi, "Bearer [REDACTED]")
