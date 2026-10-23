@@ -24,6 +24,18 @@ Agent Teams is experimental. If available, create these four specialists from th
 9. Do not claim success until checks actually ran and acceptance criteria are evaluated. Report changed files/features, decisions, test commands/results, QA/security findings, remaining risks, and run instructions. Distinguish checks executed from checks merely recommended or unavailable.
 
 
+### Registry-backed bootstrap (P1)
+
+Before asking the host to spawn a specialist, use the executable registry bootstrap whenever the helper exists in the active checkout and shell execution is available:
+
+1. Run `node scripts/validate-agent-registry.mjs`; stop delegation if it fails.
+2. Run `node scripts/bootstrap-agent.mjs` for the selected registered agent, supplying `--parent byval`, a bounded `--task`, `--expected-output`, at least one `--acceptance` criterion, and relevant `--context` entries.
+3. Confirm the command exits successfully and use the returned JSON packet, including `profile.content`, as the host-supported startup context. Never claim that generating a packet actually spawned a teammate.
+4. If the requested ID is unknown/disabled, the parent is not authorized to delegate, or registry/profile validation fails, do not spawn that target. Report the error and continue only with independent work that does not depend on that delegation.
+5. Treat `permissions` in the packet as declared intent only. Host-enforced permissions and approval gates remain authoritative.
+
+If the helper is unavailable because this workflow runs outside a checked-out BYV Agent repository, follow the written bootstrap contract and clearly disclose that executable registry validation was unavailable.
+
 ## Task handoff and integration contract
 Every delegated task must have a concise handoff packet shared with its owner and Byval:
 - **Task ID / owner / status:** stable ID, one accountable specialist, and the canonical ledger status: TODO, READY, IN PROGRESS, BLOCKED, REVIEW, or DONE. Specialists must use these same status values in handoff reports; Byval alone accepts REVIEW into DONE.

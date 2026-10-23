@@ -1,0 +1,39 @@
+name: Agent Registry
+
+on:
+  pull_request:
+    paths:
+      - "agents/**"
+      - "scripts/**"
+      - "tests/**"
+      - "docs/agent-registry-bootstrap.md"
+      - "commands/autonomous.md"
+      - "task/ROADMAP.md"
+      - ".github/workflows/agent-registry.yml"
+  push:
+    branches:
+      - main
+      - "feat/**"
+    paths:
+      - "agents/**"
+      - "scripts/**"
+      - "tests/**"
+      - "docs/agent-registry-bootstrap.md"
+      - "commands/autonomous.md"
+      - "task/ROADMAP.md"
+      - ".github/workflows/agent-registry.yml"
+
+jobs:
+  validate-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate agent registry
+        run: node scripts/validate-agent-registry.mjs
+      - name: Run agent registry and bootstrap tests
+        run: node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs
