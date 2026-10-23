@@ -1,6 +1,6 @@
 # P2 — Delegation & Task Validation
 
-**Status:** Implementation in progress; test execution and review pending  
+**Status:** Tests passed in GitHub Actions; PR review/merge pending  
 **Source of truth:** `agents/registry.json`
 
 ## Purpose and boundary
@@ -56,4 +56,4 @@ node scripts/validate-agent-registry.mjs
 node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs tests/delegation-validation.test.mjs
 ```
 
-Do not mark P2 complete until the tests have actually passed, GitHub Actions is green, and the pull request has been reviewed and merged.
+GitHub Actions run [39977053975](https://github.com/naufalelghani/byv-agent/actions/runs/39977053975) passed registry validation and all 18 tests. Do not mark P2 complete until the pull request has been reviewed and merged.
