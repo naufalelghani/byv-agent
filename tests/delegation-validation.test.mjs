@@ -32,8 +32,8 @@ test("allows registered delegation and returns a normalized task contract", asyn
 });
 
 test("rejects an unknown requesting agent", async () => {
-  await assert.rejects(
-    validateDelegationRequest({
+  assert.throws(
+    () => validateDelegationRequest({
       registry: await getRegistry(),
       request: { ...request, requestingAgentId: "unknown-parent" },
     }),
@@ -42,8 +42,8 @@ test("rejects an unknown requesting agent", async () => {
 });
 
 test("rejects an unknown target agent", async () => {
-  await assert.rejects(
-    validateDelegationRequest({
+  assert.throws(
+    () => validateDelegationRequest({
       registry: await getRegistry(),
       request: { ...request, targetAgentId: "unknown-target" },
     }),
@@ -55,25 +55,24 @@ test("rejects disabled requesting and target agents", async () => {
   const registry = await getRegistry();
   const disabledRequester = structuredClone(registry);
   disabledRequester.agents.find((agent) => agent.id === "byval").enabled = false;
-  await assert.rejects(
-    validateDelegationRequest({ registry: disabledRequester, request }),
+  assert.throws(
+    () => validateDelegationRequest({ registry: disabledRequester, request }),
     /Parent agent "byval" is disabled/,
   );
 
   const disabledTarget = structuredClone(registry);
   disabledTarget.agents.find((agent) => agent.id === "sam").enabled = false;
-  await assert.rejects(
-    validateDelegationRequest({ registry: disabledTarget, request }),
+  assert.throws(
+    () => validateDelegationRequest({ registry: disabledTarget, request }),
     /Agent "sam" is disabled/,
   );
 });
 
 test("rejects a requester without delegation permission", async () => {
   const registry = await getRegistry();
-  const candidate = structuredClone(registry);
-  await assert.rejects(
-    validateDelegationRequest({
-      registry: candidate,
+  assert.throws(
+    () => validateDelegationRequest({
+      registry,
       request: { ...request, requestingAgentId: "sam", targetAgentId: "jarvis" },
     }),
     /Parent agent "sam" is not permitted to delegate/,
@@ -81,17 +80,19 @@ test("rejects a requester without delegation permission", async () => {
 });
 
 test("rejects a target omitted from the requester's allowedTargets", async () => {
-  await assert.rejects(
-    validateDelegationRequest({
-      registry: await getRegistry(),
+  const registry = await getRegistry();
+  assert.throws(
+    () => validateDelegationRequest({
+      registry,
       request: { ...request, targetAgentId: "not-allowed" },
     }),
     /Unknown agent id: not-allowed/,
   );
-  const restrictedRegistry = structuredClone(await getRegistry());
+
+  const restrictedRegistry = structuredClone(registry);
   restrictedRegistry.agents.find((agent) => agent.id === "byval").delegation.allowedTargets = ["sam", "chloe", "morgan"];
-  await assert.rejects(
-    validateDelegationRequest({
+  assert.throws(
+    () => validateDelegationRequest({
       registry: restrictedRegistry,
       request: { ...request, targetAgentId: "jarvis" },
     }),
@@ -103,22 +104,22 @@ test("rejects malformed task payload fields and empty acceptance criteria", asyn
   const registry = await getRegistry();
   const { taskPayload } = request;
 
-  await assert.rejects(
-    validateDelegationRequest({
+  assert.throws(
+    () => validateDelegationRequest({
       registry,
       request: { ...request, taskPayload: { ...taskPayload, expectedOutput: " " } },
     }),
     /taskPayload.expectedOutput must be a non-empty string/,
   );
-  await assert.rejects(
-    validateDelegationRequest({
+  assert.throws(
+    () => validateDelegationRequest({
       registry,
       request: { ...request, taskPayload: { ...taskPayload, acceptanceCriteria: [] } },
     }),
     /acceptanceCriteria must be a non-empty array/,
   );
-  await assert.rejects(
-    validateDelegationRequest({
+  assert.throws(
+    () => validateDelegationRequest({
       registry,
       request: { ...request, taskPayload: { description: taskPayload.description } },
     }),
@@ -128,15 +129,15 @@ test("rejects malformed task payload fields and empty acceptance criteria", asyn
 
 test("rejects unsupported request and task payload fields", async () => {
   const registry = await getRegistry();
-  await assert.rejects(
-    validateDelegationRequest({
+  assert.throws(
+    () => validateDelegationRequest({
       registry,
       request: { ...request, elevatedPermissions: true },
     }),
     /delegation request contains unsupported field\(s\): elevatedPermissions/,
   );
-  await assert.rejects(
-    validateDelegationRequest({
+  assert.throws(
+    () => validateDelegationRequest({
       registry,
       request: {
         ...request,
