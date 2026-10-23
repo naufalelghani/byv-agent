@@ -1,68 +1,70 @@
 # Agent Registry Bootstrap Contract
 
-**Status:** P1 — orchestration/bootstrap convention  
+**Status:** P1 — bootstrap packet generation implemented; host startup injection remains runtime-dependent  
 **Registry:** `agents/registry.json`
 
 ## Purpose
 
 The registry is the canonical catalog for agent identity, role, capabilities, profile path, delegation policy, and declared permissions. A registry entry is metadata; it is not an agent runtime, permission enforcement mechanism, or communication transport.
 
-This contract defines what Byval should do when the host supports delegation or subagent spawning. It does not claim that a host automatically loads this file.
+The bootstrap helper now validates the registry and resolves a requested identity into a structured startup packet. It prepares the context for a host to inject, but it does not automatically spawn a Claude Code teammate or apply operating-system security controls.
+
+## Run the bootstrap helper
+
+From the repository root with Node.js installed, validate the current registry:
+
+```sh
+node scripts/validate-agent-registry.mjs
+```
+
+To prepare a packet for Sam delegated by Byval:
+
+```sh
+node scripts/bootstrap-agent.mjs \
+  --agent sam \
+  --parent byval \
+  --task "Research the authentication options used by this project" \
+  --expected-output "A concise Markdown comparison with trade-offs" \
+  --acceptance "Recommendations are grounded in repository evidence" \
+  --context "README.md"
+```
+
+The command writes JSON to stdout. The packet contains the registry version, canonical agent identity, task/acceptance criteria, declared permissions, delegation data, and the full registered profile contents when the profile path is non-null. Repeat `--acceptance` or `--context` to add more entries. Run `node scripts/bootstrap-agent.mjs --help` for the argument contract.
+
+For the root orchestrator, omit `--parent` and select an enabled agent whose type is `orchestrator`. Workers require a parent ID.
+
+## Bootstrap validation
+
+Before producing any packet, the helper loads and validates the registry and verifies referenced profile paths. It rejects malformed registry data, unknown or disabled agents, disabled or unknown parents, parents that cannot delegate, targets not listed in the parent's `allowedTargets`, incomplete task descriptions, and missing registered profiles.
+
+A successful packet means metadata and delegation checks passed for this repository snapshot. It is not proof that the host runtime can spawn the target, inject context, route messages, or enforce permissions.
 
 ## Bootstrap procedure
 
 Before delegating a task:
 
-1. Read `agents/registry.json` from the current repository checkout.
-2. Resolve the requested agent by its stable `id`. For capability-based routing, select an enabled agent whose `capabilities` cover the task; prefer the narrowest relevant specialist.
-3. Validate that the selected entry is `enabled: true`, the target is listed in Byval's `allowedTargets`, and delegation is permitted by the host.
-4. Load the referenced profile file when `profile` is non-null. If the profile is missing or unreadable, do not silently invent its instructions; report the issue and use a documented fallback only if appropriate.
-5. Send the bootstrap packet below as part of the delegated task prompt or host-supported startup context.
+1. Read and validate `agents/registry.json` using `node scripts/validate-agent-registry.mjs`.
+2. Select an enabled agent by its stable ID. For capability-based routing, choose an enabled agent whose `capabilities` cover the task and prefer the narrowest relevant specialist.
+3. Run `scripts/bootstrap-agent.mjs` with the target, parent, bounded task, expected output, acceptance criteria, and relevant context.
+4. If validation or packet generation fails, do not spawn the target; surface the actionable error and repair the registry/task input first.
+5. Pass the emitted packet, including `profile.content`, into the actual host-supported startup context. Do not claim the helper performed the spawn.
 6. Keep the task scope and permissions consistent with the registry and host policy. Host-enforced permissions take precedence; registry metadata alone cannot grant access.
-7. On return, validate the worker's output against the task acceptance criteria. Byval remains accountable for integration and final reporting.
+7. On return, validate worker output against the task acceptance criteria. Byval remains accountable for integration and final reporting.
 
 If registry access is unavailable, use the bundled agent definition only when the host makes it explicitly available, and disclose that registry-based routing could not be performed.
 
-## Bootstrap packet
+## Bootstrap packet fields
 
-Include the following fields in the delegated prompt. Values must be grounded in the current task and registry; do not fabricate missing fields.
+The JSON packet includes the following sections:
 
-```yaml
-registry_id: byv-agent-registry
-registry_schema_version: "1.0.0"
-agent_id: "<selected agent id>"
-agent_name: "<registry name>"
-agent_role: "<registry role>"
-parent_agent_id: byval
-task: "<specific bounded assignment>"
-expected_output: "<deliverable and format>"
-acceptance_criteria:
-  - "<verifiable criterion>"
-relevant_context:
-  - "<files, decisions, interfaces, or constraints needed for this task>"
-permission_boundary:
-  source_access: "<registry declaration>"
-  shell: "<registry declaration>"
-  network: "<registry declaration>"
-  host_policy: "Host-enforced controls remain authoritative."
-delegation:
-  can_delegate: false
-  communication: "Return findings to Byval through the host-supported task result."
-```
-
-For workers, preserve the registry's no-delegation policy. Do not tell a worker it can message another agent directly unless the host actually provides that communication capability.
-
-## Task handoff and results
-
-Byval should provide workers with only the context needed for their assignment, including relevant repository instructions and interface contracts. Workers should return:
-
-- concise outcome and key decisions;
-- files changed (or files inspected for read-only tasks);
-- checks run and their actual results;
-- blockers, assumptions, and unresolved risks;
-- any required follow-up or integration notes.
-
-Byval must distinguish reported checks from checks independently verified. Avoid parallel ownership of the same files unless the host supports safe coordination.
+- `registry`: registry ID and schema version.
+- `agent`: canonical ID, name, role, type, description, and capabilities.
+- `parentAgentId`: the parent authorized by the registry's delegation policy, or `null` for a root orchestrator.
+- `task`: specific assignment, expected output, verifiable acceptance criteria, and relevant context.
+- `profile`: registered profile path and loaded profile contents, or `null` if no profile is registered.
+- `permissions`: declared source, shell, and network access, plus a reminder that host policy remains authoritative.
+- `delegation`: the selected agent's own delegation declaration.
+- `runtimeBoundary`: an explicit statement of what this helper does not enforce.
 
 ## Permission semantics
 
@@ -76,4 +78,4 @@ If the host cannot enforce a declared boundary, Byval must constrain the task op
 
 ## Current capability boundary
 
-This repository currently provides agent profiles, a declarative registry, and orchestration instructions. Actual runtime registry loading, capability routing, dynamic bootstrap injection, inter-agent messaging, and permission enforcement depend on the host/orchestrator and are not implemented by this document.
+P1 provides local registry validation, agent/profile resolution, delegation-policy checks, and JSON startup packet generation. Actual runtime spawning, automatic startup-context injection, inter-agent messaging, dynamic registry reload, and host-enforced permission boundaries are not implemented by this document or helper; they depend on host/orchestrator capabilities and future project phases.
