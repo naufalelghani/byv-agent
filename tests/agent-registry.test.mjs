@@ -17,4 +17,6 @@ test("registry JSON parses and declares unique agent ids", async () => {
   const ids = registry.agents.map(agent => agent.id);
   assert.equal(new Set(ids).size, ids.length);
   assert.ok(ids.length > 0);
+  assert.equal(registry.schemaVersion, "1.1.0");
+  assert.ok(registry.agents.every(agent => agent.runtime?.provider === "claude-code"));
 });
