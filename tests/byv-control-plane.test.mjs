@@ -257,6 +257,121 @@ test("interrupted in-flight tasks are marked BLOCKED and may be explicitly resum
   }
 });
 
+test("recovery after interruption invalidates prior attempt evidence until fresh handoff and verification", async () => {
+  const projectRoot = await createTempProject();
+  try {
+    const first = await createRunLedger({ projectRoot });
+    const run = await createActiveRun(first);
+    await first.recordPlan({ runId: run.runId, tasks: oneTaskPlan() });
+    await first.updateTask({ runId: run.runId, taskId: "T-01", status: "READY" });
+    await first.updateTask({ runId: run.runId, taskId: "T-01", status: "IN_PROGRESS" });
+
+    await first.recordVerification({
+      runId: run.runId,
+      taskId: "T-01",
+      criterionId: "AC-01",
+      command: "attempt 1 verification",
+      outcome: "PASS",
+      executed: true,
+      summary: "Observed passing verification for attempt 1.",
+    });
+    await first.recordHandoff({
+      runId: run.runId,
+      taskId: "T-01",
+      summary: "Handoff for attempt 1.",
+      changedFiles: [],
+      unresolvedRisks: [],
+      nextAction: "Continue after recovery",
+      evidenceRefs: ["attempt-1"],
+    });
+
+    // Force recovery to simulate a process restart while this test process remains alive.
+    const recovered = await createRunLedger({ projectRoot, recoverAllActiveRuns: true });
+    let summary = await recovered.getRunSummary({ runId: run.runId });
+    assert.equal(summary.status, "interrupted");
+    assert.equal(summary.tasks[0].status, "BLOCKED");
+    assert.equal(summary.tasks[0].attempt, 2);
+    assert.match(summary.tasks[0].blockReason, /outcome is unknown/);
+    assert.equal(summary.tasks[0].acceptanceCriteria[0].latestOutcome, "NOT_TESTED");
+    assert.deepEqual(summary.tasks[0].verifications.map((item) => item.attempt), [1]);
+    assert.equal(summary.tasks[0].handoff.attempt, 1);
+    assert.equal(summary.recoveryCount, 1);
+
+    summary = await recovered.resumeRun({
+      runId: run.runId,
+      reason: "Operator reviewed the interrupted attempt; redo task with fresh evidence.",
+    });
+    assert.equal(summary.status, "in_progress");
+    await recovered.updateTask({ runId: run.runId, taskId: "T-01", status: "READY" });
+    await recovered.updateTask({ runId: run.runId, taskId: "T-01", status: "IN_PROGRESS" });
+
+    summary = await recovered.getRunSummary({ runId: run.runId });
+    assert.equal(summary.tasks[0].status, "IN_PROGRESS");
+    assert.equal(summary.tasks[0].attempt, 2);
+    assert.equal(summary.tasks[0].acceptanceCriteria[0].latestOutcome, "NOT_TESTED");
+    assert.equal(summary.tasks[0].handoff.attempt, 1);
+    assert.deepEqual(summary.tasks[0].verifications.map((item) => item.attempt), [1]);
+
+    await assert.rejects(
+      recovered.updateTask({ runId: run.runId, taskId: "T-01", status: "REVIEW" }),
+      /handoff for the current attempt/,
+    );
+    summary = await recovered.getRunSummary({ runId: run.runId });
+    assert.equal(summary.tasks[0].status, "IN_PROGRESS");
+    assert.equal(summary.tasks[0].attempt, 2);
+    assert.equal(summary.tasks[0].acceptanceCriteria[0].latestOutcome, "NOT_TESTED");
+
+    await recovered.recordHandoff({
+      runId: run.runId,
+      taskId: "T-01",
+      summary: "Fresh handoff for recovered attempt 2.",
+      changedFiles: [],
+      unresolvedRisks: [],
+      nextAction: "Record fresh verification",
+      evidenceRefs: ["attempt-2"],
+    });
+    await assert.rejects(
+      recovered.updateTask({ runId: run.runId, taskId: "T-01", status: "REVIEW" }),
+      /verification evidence for the current attempt/,
+    );
+    summary = await recovered.getRunSummary({ runId: run.runId });
+    assert.equal(summary.tasks[0].status, "IN_PROGRESS");
+    assert.equal(summary.tasks[0].attempt, 2);
+    assert.equal(summary.tasks[0].handoff.attempt, 2);
+    assert.equal(summary.tasks[0].acceptanceCriteria[0].latestOutcome, "NOT_TESTED");
+
+    await recovered.recordVerification({
+      runId: run.runId,
+      taskId: "T-01",
+      criterionId: "AC-01",
+      command: "attempt 2 verification",
+      outcome: "PASS",
+      executed: true,
+      summary: "Observed passing verification after recovery and re-execution.",
+    });
+    await recovered.updateTask({ runId: run.runId, taskId: "T-01", status: "REVIEW" });
+    await recovered.updateTask({ runId: run.runId, taskId: "T-01", status: "DONE" });
+    summary = await recovered.finishRun({
+      runId: run.runId,
+      outcome: "DONE",
+      summary: "Recovered task completed only after fresh attempt 2 evidence.",
+    });
+
+    assert.equal(summary.status, "done");
+    const final = await recovered.getRunSummary({ runId: run.runId });
+    assert.equal(final.tasks[0].status, "DONE");
+    assert.equal(final.tasks[0].attempt, 2);
+    assert.equal(final.tasks[0].acceptanceCriteria[0].latestOutcome, "PASS");
+    assert.deepEqual(final.tasks[0].verifications.map((item) => item.attempt), [1, 2]);
+    assert.equal(final.tasks[0].handoff.attempt, 2);
+    assert.ok(final.events.some((event) =>
+      event.event === "run.interrupted" &&
+      event.details.recoveredTaskAttempts?.some((item) => item.taskId === "T-01" && item.attempt === 2)));
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
 test("a run with a confirmed-dead owner is recovered without a force override", async (t) => {
   const projectRoot = await createTempProject();
   try {
