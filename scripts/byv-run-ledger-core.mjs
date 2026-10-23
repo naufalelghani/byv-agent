@@ -80,8 +80,6 @@ function redactText(value) {
     .slice(0, 4000);
 }
 
-export { redactText };
-
 function safeRelativePath(value, label) {
   const text = nonEmpty(value, label, 500).replace(/\\/g, "/");
   check(!text.startsWith("/") && !/^[A-Za-z]:/.test(text), label + " must be repository-relative");
