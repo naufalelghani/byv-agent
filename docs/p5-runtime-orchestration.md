@@ -1,6 +1,6 @@
 # P5 — Runtime Orchestration & API-First Provider Support
 
-**Status:** Design proposal; implementation has not started.  
+**Status:** Design approved and merged through PR #7. P5.1 API-first configuration/runtime mapping is merged through PR #8; P5.2 MCP control plane and durable ledger are in implementation/review. Native runtime dispatch and provider compatibility remain later phases.  
 **Depends on:** P0–P4, all complete on `main`.  
 **Primary execution target:** Claude Code CLI using explicit API-key or gateway credentials, without requiring a claude.ai subscription login.
 
