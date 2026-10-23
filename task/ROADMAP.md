@@ -134,4 +134,4 @@ Acceptance criteria:
 ## Progress log
 
 - 2026-10-23 — P0 validator/schema/tests/docs committed and verified locally; PR #2 was reviewed and squash-merged into `main` at `67700779beccc4e6beb42d6797523966cd5466ed`.
-- 2026-10-23 — Created `feat/p1-agent-bootstrap` from the updated `main`; beginning P1 bootstrap CLI, policy validation, automated tests, and docs.
+- 2026-10-23 — Created `feat/p1-agent-bootstrap` from the updated `main`. Added the reusable validated registry loader, bootstrap packet CLI, initial tests for success/invalid registry/unknown and disabled agents/unauthorized parent, and updated bootstrap and autonomous workflow docs. Local execution of the new tests is still pending because this environment cannot resolve `github.com`; do not mark P1 accepted until the commands run successfully.
