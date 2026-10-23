@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "profiles": [
+    {
+      "id": "custom-gateway-example",
+      "endpointMode": "third-party-endpoint",
+      "protocol": "translated-anthropic-messages",
+      "baseUrlEnv": "ANTHROPIC_BASE_URL",
+      "modelIdEnv": "ANTHROPIC_MODEL",
+      "credentialEnv": [
+        "ANTHROPIC_AUTH_TOKEN",
+        "ANTHROPIC_API_KEY"
+      ],
+      "verificationStatus": "unverified",
+      "capabilities": {
+        "streaming": "unverified",
+        "toolUse": "unverified",
+        "agentTeams": "unverified"
+      },
+      "notes": "Example metadata only. Keep endpoint-specific secrets in the user's environment. A translation gateway must implement and pass the Anthropic Messages compatibility suite."
+    }
+  ]
+}
