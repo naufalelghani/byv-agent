@@ -256,6 +256,7 @@ export async function createRunLedger({
   maxEvents = DEFAULT_MAX_EVENTS,
   maxRecordBytes = DEFAULT_MAX_RECORD_BYTES,
   lockTimeoutMs = 5000,
+  recoverAllActiveRuns = false,
 } = {}) {
   check(typeof clock === "function", "clock must be a function");
   check(Number.isSafeInteger(maxRuns) && maxRuns >= 1, "maxRuns must be a positive safe integer");
@@ -325,6 +326,7 @@ export async function createRunLedger({
     }
   }
 
+  const instanceId = randomBytes(16).toString("hex");
   let mutationQueue = Promise.resolve();
   function mutate(operation) {
     const pending = mutationQueue.then(
@@ -422,6 +424,17 @@ export async function createRunLedger({
       let recoveredCount = 0;
       for (const record of records) {
         if (record.status !== "in_progress") continue;
+        const ownerPid = record.ownerPid;
+        let ownerAlive = false;
+        if (Number.isSafeInteger(ownerPid) && ownerPid > 0) {
+          try {
+            process.kill(ownerPid, 0);
+            ownerAlive = true;
+          } catch (error) {
+            ownerAlive = error.code === "EPERM";
+          }
+        }
+        if (ownerAlive && !recoverAllActiveRuns) continue;
         record.status = "interrupted";
         record.recoveryCount = (record.recoveryCount || 0) + 1;
         const blockedTaskIds = [];
@@ -472,6 +485,8 @@ export async function createRunLedger({
         createdAt: now,
         updatedAt: now,
         status: "in_progress",
+        ownerPid: process.pid,
+        ownerInstanceId: instanceId,
         executionMode,
         provider: {
           profileId: nonEmpty(provider.profileId, "provider.profileId", 64),
@@ -677,6 +692,8 @@ export async function createRunLedger({
       const record = await readRun(runId);
       check(record.status === "interrupted", "Only an interrupted run can be resumed");
       record.status = "in_progress";
+      record.ownerPid = process.pid;
+      record.ownerInstanceId = instanceId;
       record.finalDisposition = null;
       record.finalSummary = null;
       addEvent(record, "run.resumed", { reason: normalizedReason }, clock, maxEvents);
