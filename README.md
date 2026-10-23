@@ -21,6 +21,10 @@ The Frontend Engineer includes two plugin skills:
 
 They live in the plugin's `skills/` directory and are available when the plugin is installed. **No separate skill installation or manual setup is required.** The Frontend Engineer is instructed to load them for relevant UI tasks. They are used as contextual guidance, not as rigid templates; project requirements and accessibility take precedence.
 
+## Backend documentation skill (Context7)
+
+The Backend Engineer is instructed to load the bundled `context7` skill for framework, library, SDK, database, and backend API documentation. It uses Context7 MCP documentation lookup when those tools are available in the Claude Code runtime, and falls back transparently to repository evidence if they are not. The skill file is included with the plugin; **live Context7 lookup still requires Context7 MCP to be configured in the runtime**.
+
 ## Install from this GitHub marketplace
 
 In Claude Code:
@@ -62,6 +66,8 @@ skills/
   frontend-design/
     SKILL.md
   ui-ux-pro-max/
+    SKILL.md
+  context7/
     SKILL.md
 commands/
   autonomous.md
