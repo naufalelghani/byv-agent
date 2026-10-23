@@ -1,6 +1,6 @@
 # P3 — Inter-Agent Messaging
 
-**Status:** P3 — REVIEW; CI passed; real transport is intentionally out of scope  
+**Status:** P3 — DONE; merged through PR #5. Real transport is intentionally out of scope  
 **Source of truth:** `agents/registry.json`
 
 ## Purpose and runtime boundary
@@ -62,3 +62,8 @@ A non-zero exit code indicates invalid JSON, unsupported fields/types, an invali
 node scripts/validate-agent-registry.mjs
 node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs tests/delegation-validation.test.mjs tests/agent-message.test.mjs
 ```
+
+
+## Merge and verification record
+
+PR [#5](https://github.com/naufalelghani/byv-agent/pull/5) was squash-merged into `main` at `dffd293f33a06a769303aef46f3d323dfa3c1594`. GitHub Actions run [39979200629](https://github.com/naufalelghani/byv-agent/actions/runs/39979200629) and user-run Windows PowerShell verification both passed all 29 tests.
