@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schemaVersion": "1.0.0",
+  "registryId": "byv-agent-registry",
+  "description": "Declarative identity and capability registry for BYV agents. This file describes agents; it does not itself start agents or provide inter-agent messaging.",
+  "agents": [
+    {
+      "id": "byval",
+      "name": "Byval",
+      "role": "Lead Agent & Autonomous Development Orchestrator",
+      "profile": null,
+      "type": "orchestrator",
+      "description": "Coordinates work, decomposes tasks, selects specialists, and integrates results.",
+      "capabilities": ["orchestration", "task-decomposition", "delegation", "integration"],
+      "enabled": true,
+      "delegation": {
+        "canDelegate": true,
+        "allowedTargets": ["sam", "jarvis", "chloe", "morgan"]
+      },
+      "permissions": {
+        "sourceAccess": "read-write",
+        "shell": "policy-controlled",
+        "network": "policy-controlled"
+      }
+    },
+    {
+      "id": "sam",
+      "name": "Sam",
+      "role": "Planning & Research Specialist",
+      "profile": "agents/planning-research.md",
+      "type": "worker",
+      "description": "Researches options, clarifies requirements, and prepares plans and technical analysis.",
+      "capabilities": ["research", "requirements-analysis", "planning", "architecture-analysis"],
+      "enabled": true,
+      "delegation": {
+        "canDelegate": false,
+        "allowedTargets": []
+      },
+      "permissions": {
+        "sourceAccess": "read-only",
+        "shell": "deny",
+        "network": "policy-controlled"
+      }
+    },
+    {
+      "id": "jarvis",
+      "name": "Jarvis",
+      "role": "Backend Engineer",
+      "profile": "agents/backend-engineer.md",
+      "type": "worker",
+      "description": "Implements and reviews backend services, APIs, data models, and integrations.",
+      "capabilities": ["backend-development", "api-design", "database-design", "server-side-testing"],
+      "enabled": true,
+      "delegation": {
+        "canDelegate": false,
+        "allowedTargets": []
+      },
+      "permissions": {
+        "sourceAccess": "read-write",
+        "shell": "policy-controlled",
+        "network": "policy-controlled"
+      }
+    },
+    {
+      "id": "chloe",
+      "name": "Chloe",
+      "role": "Frontend Engineer",
+      "profile": "agents/frontend-engineer.md",
+      "type": "worker",
+      "description": "Implements accessible, responsive user interfaces and frontend integrations.",
+      "capabilities": ["frontend-development", "ui-implementation", "accessibility", "frontend-testing"],
+      "enabled": true,
+      "delegation": {
+        "canDelegate": false,
+        "allowedTargets": []
+      },
+      "permissions": {
+        "sourceAccess": "read-write",
+        "shell": "policy-controlled",
+        "network": "policy-controlled"
+      }
+    },
+    {
+      "id": "morgan",
+      "name": "Morgan",
+      "role": "Security & QA Auditor",
+      "profile": "agents/security-qa.md",
+      "type": "worker",
+      "description": "Audits security, risks, quality, and regressions without modifying project source.",
+      "capabilities": ["security-audit", "qa-review", "risk-assessment", "regression-analysis"],
+      "enabled": true,
+      "delegation": {
+        "canDelegate": false,
+        "allowedTargets": []
+      },
+      "permissions": {
+        "sourceAccess": "read-only",
+        "shell": "deny",
+        "network": "policy-controlled"
+      }
+    }
+  ]
+}
