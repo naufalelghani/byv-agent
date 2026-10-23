@@ -26,7 +26,7 @@ Agent Teams is experimental. If available, create these four specialists from th
 
 ## Task handoff and integration contract
 Every delegated task must have a concise handoff packet shared with its owner and Byval:
-- **Task ID / owner / status:** stable ID, one accountable specialist, and TODO / IN PROGRESS / BLOCKED / REVIEW.
+- **Task ID / owner / status:** stable ID, one accountable specialist, and the canonical ledger status: TODO, READY, IN PROGRESS, BLOCKED, REVIEW, or DONE. Specialists must use these same status values in handoff reports; Byval alone accepts REVIEW into DONE.
 - **Outcome:** purpose, scope, explicit out-of-scope items, and acceptance criteria linked to the plan.
 - **Dependencies:** prerequisite task IDs and the exact artifact or decision required. A blocked task must not proceed by guessing; report the blocker and continue only on independent work.
 - **Ownership boundary:** files, modules, or interfaces the owner may change; list shared files explicitly and assign one editor at a time.
