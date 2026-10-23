@@ -32,9 +32,10 @@ test("allows registered delegation and returns a normalized task contract", asyn
 });
 
 test("rejects an unknown requesting agent", async () => {
+  const registry = await getRegistry();
   assert.throws(
     () => validateDelegationRequest({
-      registry: await getRegistry(),
+      registry,
       request: { ...request, requestingAgentId: "unknown-parent" },
     }),
     /Unknown parent agent id: unknown-parent/,
@@ -42,9 +43,10 @@ test("rejects an unknown requesting agent", async () => {
 });
 
 test("rejects an unknown target agent", async () => {
+  const registry = await getRegistry();
   assert.throws(
     () => validateDelegationRequest({
-      registry: await getRegistry(),
+      registry,
       request: { ...request, targetAgentId: "unknown-target" },
     }),
     /Unknown agent id: unknown-target/,
