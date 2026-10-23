@@ -71,7 +71,6 @@ test("rejects disabled requesting and target agents", async () => {
 test("rejects a requester without delegation permission", async () => {
   const registry = await getRegistry();
   const candidate = structuredClone(registry);
-  const sam = candidate.agents.find((agent) => agent.id === "sam");
   await assert.rejects(
     validateDelegationRequest({
       registry: candidate,
@@ -89,9 +88,11 @@ test("rejects a target omitted from the requester's allowedTargets", async () =>
     }),
     /Unknown agent id: not-allowed/,
   );
+  const restrictedRegistry = structuredClone(await getRegistry());
+  restrictedRegistry.agents.find((agent) => agent.id === "byval").delegation.allowedTargets = ["sam", "chloe", "morgan"];
   await assert.rejects(
     validateDelegationRequest({
-      registry: await getRegistry(),
+      registry: restrictedRegistry,
       request: { ...request, targetAgentId: "jarvis" },
     }),
     /Parent agent "byval" is not allowed to delegate to "jarvis"/,
