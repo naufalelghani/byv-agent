@@ -16,12 +16,12 @@ Implement the Agent Registry lifecycle for BYV Agent: define and validate agent 
 
 ## Current overall status
 
-**Current phase: P1 — REVIEW**  
-**Completed phase: P0 — DONE**  
-**Current working branch: `feat/p1-agent-bootstrap`**  
-**Previous PR: [#2 — feat(P0): implement agent registry core validation](https://github.com/naufalelghani/byv-agent/pull/2) (merged)**
+**Current phase: P2 — IN PROGRESS**  
+**Completed phases: P0 — DONE; P1 — DONE**  
+**Current P2 branch: `feat/p2-delegation-task-validation`**  
+**Latest merged PR: [#3 — feat(P1): add agent bootstrap packet generation](https://github.com/naufalelghani/byv-agent/pull/3)**
 
-P0's validator and tests passed in the user's local Windows PowerShell checkout on 2026-10-23. PR #2 was squash-merged into `main` at commit `67700779beccc4e6beb42d6797523966cd5466ed`. P1 implementation is available for review on a separate branch. GitHub Actions run [39974705733](https://github.com/naufalelghani/byv-agent/actions/runs/39974705733) passed registry validation and the combined registry/bootstrap test command. P1 remains in REVIEW until PR #3 is accepted/merged.
+P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 implementation is on branch `feat/p2-delegation-task-validation`. GitHub Actions run [39977053975](https://github.com/naufalelghani/byv-agent/actions/runs/39977053975) passed registry validation and all 18 tests. PR #4 is ready for review but remains unmerged.
 
 ## Phases
 
@@ -44,49 +44,48 @@ Implemented and merged in PR #2:
 Verification evidence (user-run locally on Windows PowerShell):
 - [x] `node scripts/validate-agent-registry.mjs` — passed; registry `byv-agent-registry`, schema `1.0.0`, 5 agents.
 - [x] `node --test tests/agent-registry.test.mjs` — passed; 2 tests, 0 failures.
-- [x] PR #2 reviewed for merge readiness and merged into `main`.
+- [x] PR #2 merged into `main`.
 
 ### P1 — Bootstrap & Agent Initialization
 
-**Status: REVIEW**
+**Status: DONE**
 
 Goal: make the registry the executable source of truth for agent startup, not only documentation.
 
-Implementation scope:
-- Define a clear bootstrap CLI entry point and input contract.
-- Load and validate the registry before constructing any bootstrap packet.
-- Resolve agent identity and load its registered profile.
-- Enforce enabled state, parent identity, and the parent's declared delegation target rules.
-- Reject unknown agents, disabled agents, missing task data, and invalid registry data.
-- Emit a structured bootstrap packet for the host/orchestrator to inject into a spawned agent's startup context.
-- Add automated tests and usage documentation.
+Implemented and merged in PR #3:
+- Reusable validated registry loader and validation core.
+- Bootstrap CLI that resolves the registered identity/profile and emits a structured startup packet.
+- Enforcement of enabled state, parent identity, and registered delegation target policy during bootstrap.
+- Automated registry and bootstrap tests, CI workflow, and documentation.
 
-Boundary: the CLI prepares and validates a bootstrap packet; it does not itself spawn a Claude Code teammate or sandbox shell/network access. Actual startup-context injection and host permissions remain controlled by the host runtime.
+Boundary: the CLI prepares a bootstrap packet; it does not itself spawn a Claude Code teammate or sandbox shell/network access. Actual startup-context injection and host permissions remain controlled by the host runtime.
 
-Acceptance criteria:
-- [x] Bootstrap validates the registry and fails closed on invalid registry data — verified in GitHub Actions run 39974705733.
-- [x] A known enabled agent produces a bootstrap packet with registered profile contents — covered by the successful Sam CLI test in GitHub Actions run 39974705733.
-- [x] Unknown and disabled agent IDs are rejected — covered by passing bootstrap tests in GitHub Actions run 39974705733.
-- [x] Parent-to-target delegation policy is enforced — passing test covers a parent without delegation permission.
-- [x] Automated tests cover success and failure paths — `node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs` passed in GitHub Actions run 39974705733.
-- [x] Bootstrap contract and autonomous workflow documentation updated.
+Verification evidence (user-run locally on Windows PowerShell, 2026-10-23):
+- [x] `node scripts/validate-agent-registry.mjs` — passed; 5 registered agents.
+- [x] Manual `scripts/bootstrap-agent.mjs` run for Sam — emitted the expected JSON packet.
+- [x] Unknown agent ID `not-registered` — rejected with `Unknown agent id`.
+- [x] `node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs` — 8 passed, 0 failed.
+- [x] PR #3 squash-merged into `main` at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`.
 
 ### P2 — Delegation & Task Validation
 
-**Status: TODO — depends on P1**
+**Status: IN PROGRESS**
 
-Goal: make delegation rules executable and ensure delegated tasks are consistent with registry permissions.
+Goal: make delegation rules executable and ensure delegated tasks are consistent with registry permissions and an explicit task contract.
 
-Planned work:
-- Validate the requesting agent, target agent, and delegation permission.
-- Enforce allowed delegation targets and enabled status.
-- Validate task payload/required fields and reject unsupported requests.
-- Add tests for allowed and denied delegation paths.
+Implementation added on `feat/p2-delegation-task-validation`:
+- `scripts/delegation-core.mjs` — shared pure validator for requester, target, registry delegation permissions, enabled state, and task payload shape.
+- `scripts/validate-delegation.mjs` — CLI preflight that emits a normalized JSON delegation contract; it does not spawn agents.
+- `scripts/bootstrap-agent.mjs` now reuses the shared validator instead of maintaining a separate delegation-policy implementation.
+- `tests/delegation-validation.test.mjs` — positive/negative policy, malformed payload, unsupported field/option, and CLI cases.
+- CI now includes the P2 test file, and documentation describes the standalone contract.
 
-Acceptance criteria:
-- [ ] Delegation is permitted only when registry policy allows it.
-- [ ] Invalid targets, disabled agents, and malformed task payloads are rejected.
-- [ ] Automated tests cover positive and negative cases.
+Acceptance criteria (automated verification passed; review/merge pending):
+- [x] Delegation is permitted only when registry policy allows it.
+- [x] Unknown/disabled requester or target, disallowed targets, malformed task payloads, and unsupported fields/options are rejected.
+- [x] Automated tests cover positive and negative cases — GitHub Actions run [39977053975](https://github.com/naufalelghani/byv-agent/actions/runs/39977053975): 18 passed, 0 failed.
+- [x] GitHub Actions registry validation and test job passed.
+- [ ] PR #4 is reviewed and merged.
 
 ### P3 — Inter-Agent Messaging
 
@@ -126,11 +125,13 @@ Acceptance criteria:
 ## Resume instructions for a future session
 
 1. Read this file first: `task/ROADMAP.md`.
-2. Check current branch/PR status in GitHub.
+2. Check the current branch and PR status in GitHub.
 3. Do not assume a status is complete without checking its acceptance checklist and actual test results.
-4. Start with the earliest phase not marked `DONE`; currently that is P1 review/acceptance. Once P1 is accepted, update this file and begin P2. Record implementation links, test commands/results, blockers, and status changes here.
+4. Run the local test command above in the user's checkout, review PR #4, then merge it before marking P2 `DONE`.
+5. Once P2 is accepted, begin P3 and keep implementation links, test commands/results, and blockers here.
 
 ## Progress log
 
-- 2026-10-23 — P0 validator/schema/tests/docs committed and verified locally; PR #2 was reviewed and squash-merged into `main` at `67700779beccc4e6beb42d6797523966cd5466ed`.
-- 2026-10-23 — Created `feat/p1-agent-bootstrap` from the updated `main`. Added the reusable validated registry loader, bootstrap packet CLI, tests, CI workflow, and updated bootstrap/autonomous workflow docs. GitHub Actions run [39974705733](https://github.com/naufalelghani/byv-agent/actions/runs/39974705733) passed both registry validation and automated tests. PR #3 is ready for review; P1 remains `REVIEW` until accepted/merged.
+- 2026-10-23 — P0 schema, validator, tests, and docs verified locally and merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`.
+- 2026-10-23 — P1 bootstrap CLI, tests, CI, and docs merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`; user confirmed 8/8 local tests passed.
+- 2026-10-23 — Started P2 on `feat/p2-delegation-task-validation`: added the reusable delegation validator, standalone validation CLI, tests, CI coverage, and documentation. GitHub Actions run [39977053975](https://github.com/naufalelghani/byv-agent/actions/runs/39977053975) passed 18/18 tests; PR #4 awaits review/merge.

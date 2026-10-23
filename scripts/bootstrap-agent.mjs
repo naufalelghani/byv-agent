@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadValidatedRegistry, REPOSITORY_ROOT } from "./agent-registry-core.mjs";
+import { validateDelegationRequest } from "./delegation-core.mjs";
 
 const USAGE = `BYV Agent bootstrap packet generator
 
@@ -110,19 +111,26 @@ export async function createBootstrapPacket({
   if (!agent.enabled) throw new Error(`Agent "${agentId}" is disabled`);
 
   let parent = null;
-  if (parentAgentId) {
+  if (parentAgentId !== undefined && parentAgentId !== null && parentAgentId !== "") {
+    if (typeof parentAgentId !== "string") {
+      throw new Error("parentAgentId must be a non-empty string when supplied");
+    }
     const parentId = parentAgentId.trim();
     if (!parentId) throw new Error("parentAgentId must be a non-empty string when supplied");
-    parent = agents.find((entry) => entry.id === parentId);
-    if (!parent) throw new Error(`Unknown parent agent id: ${parentId}`);
-    if (!parent.enabled) throw new Error(`Parent agent "${parentId}" is disabled`);
-    if (parent.id === agent.id) throw new Error("An agent cannot bootstrap itself as its own child");
-    if (!parent.delegation.canDelegate) {
-      throw new Error(`Parent agent "${parentId}" is not permitted to delegate`);
-    }
-    if (!parent.delegation.allowedTargets.includes(agent.id)) {
-      throw new Error(`Parent agent "${parentId}" is not allowed to delegate to "${agent.id}"`);
-    }
+    const validatedDelegation = validateDelegationRequest({
+      registry,
+      request: {
+        requestingAgentId: parentId,
+        targetAgentId: agent.id,
+        taskPayload: {
+          description: task,
+          expectedOutput,
+          acceptanceCriteria,
+          relevantContext,
+        },
+      },
+    });
+    parent = agents.find((entry) => entry.id === validatedDelegation.requester.id);
   } else if (agent.type !== "orchestrator") {
     throw new Error(`Parent agent id is required when bootstrapping worker "${agentId}"`);
   }
