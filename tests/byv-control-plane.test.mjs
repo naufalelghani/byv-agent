@@ -15,6 +15,17 @@ async function createTempProject() {
   return mkdtemp(join(tmpdir(), "byv-p52-"));
 }
 
+function findDefinitelyDeadPid() {
+  for (const candidate of [2147483647, 2147483646, 2000000000, 1000000000, 999999999]) {
+    try {
+      process.kill(candidate, 0);
+    } catch (error) {
+      if (error.code === "ESRCH") return candidate;
+    }
+  }
+  return null;
+}
+
 async function createContext() {
   const { registry } = await registryPromise;
   return {
@@ -246,6 +257,37 @@ test("interrupted in-flight tasks are marked BLOCKED and may be explicitly resum
   }
 });
 
+test("a run with a confirmed-dead owner is recovered without a force override", async (t) => {
+  const projectRoot = await createTempProject();
+  try {
+    const deadPid = findDefinitelyDeadPid();
+    if (deadPid === null) {
+      t.skip("Could not identify a definitely non-existent PID on this platform");
+      return;
+    }
+
+    const first = await createRunLedger({ projectRoot });
+    const run = await createActiveRun(first);
+    await first.recordPlan({ runId: run.runId, tasks: oneTaskPlan() });
+    await first.updateTask({ runId: run.runId, taskId: "T-01", status: "READY" });
+    await first.updateTask({ runId: run.runId, taskId: "T-01", status: "IN_PROGRESS" });
+
+    const recordPath = join(first.storageDirectory, run.runId + ".json");
+    const record = JSON.parse(await readFile(recordPath, "utf8"));
+    record.ownerPid = deadPid;
+    await writeFile(recordPath, JSON.stringify(record, null, 2) + "\n", "utf8");
+
+    const recovered = await createRunLedger({ projectRoot });
+    const summary = await recovered.getRunSummary({ runId: run.runId });
+    assert.equal(summary.status, "interrupted");
+    assert.equal(summary.tasks[0].status, "BLOCKED");
+    assert.match(summary.tasks[0].blockReason, /outcome is unknown/);
+    assert.equal(summary.recoveryCount, 1);
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
 test("ledger rejects storage paths outside the project and repository traversal file boundaries", async () => {
   const projectRoot = await createTempProject();
   try {
@@ -324,17 +366,7 @@ test("an old lock owned by a live process is not stolen", async () => {
 test("a stale lock is reclaimed when its owner is confirmed dead", async (t) => {
   const projectRoot = await createTempProject();
   try {
-    let deadPid = null;
-    for (const candidate of [2147483647, 2147483646, 2000000000, 1000000000, 999999999]) {
-      try {
-        process.kill(candidate, 0);
-      } catch (error) {
-        if (error.code === "ESRCH") {
-          deadPid = candidate;
-          break;
-        }
-      }
-    }
+    const deadPid = findDefinitelyDeadPid();
     if (deadPid === null) {
       t.skip("Could not identify a definitely non-existent PID on this platform");
       return;
