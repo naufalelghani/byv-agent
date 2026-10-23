@@ -2,6 +2,23 @@
   "schemaVersion": "1.0.0",
   "profiles": [
     {
+      "id": "direct-anthropic-api",
+      "endpointMode": "direct-api",
+      "protocol": "anthropic-messages",
+      "baseUrlEnv": null,
+      "modelIdEnv": "ANTHROPIC_MODEL",
+      "credentialEnv": [
+        "ANTHROPIC_API_KEY"
+      ],
+      "verificationStatus": "unverified",
+      "capabilities": {
+        "streaming": "unverified",
+        "toolUse": "unverified",
+        "agentTeams": "unverified"
+      },
+      "notes": "Metadata example for explicit API-key authentication. It does not imply a model smoke test has passed."
+    },
+    {
       "id": "custom-gateway-example",
       "endpointMode": "third-party-endpoint",
       "protocol": "translated-anthropic-messages",
