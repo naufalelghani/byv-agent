@@ -16,11 +16,12 @@ Implement the Agent Registry lifecycle for BYV Agent: define and validate agent 
 
 ## Current overall status
 
-**Current phase: P4 — TODO**  
+**Current phase: P4 — IN PROGRESS**  
 **Completed phases: P0 — DONE; P1 — DONE; P2 — DONE; P3 — DONE**  
+**Current P4 branch: `feat/p4-dynamic-registry`**  
 **Latest merged PR: [#5 — feat(P3): validate inter-agent message envelopes](https://github.com/naufalelghani/byv-agent/pull/5)**
 
-P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 was squash-merged through PR #4 into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`. GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665) passed registry validation and all 18 tests. The user also verified the same 18 tests locally on Windows PowerShell, with 0 failures. P3 was squash-merged through PR #5 into `main` at `dffd293f33a06a769303aef46f3d323dfa3c1594`. GitHub Actions run [39979200629](https://github.com/naufalelghani/byv-agent/actions/runs/39979200629) passed all 29 tests, and the user verified the same 29 tests passed locally on Windows PowerShell. P3 validates message envelopes and prepares a delivery plan; actual message dispatch and task-state persistence are not included.
+P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 was squash-merged through PR #4 into `main` at `dbd14a22c3d5a1526af1628f807b4d3baec98181`. GitHub Actions run [39977192665](https://github.com/naufalelghani/byv-agent/actions/runs/39977192665) passed registry validation and all 18 tests. The user also verified the same 18 tests locally on Windows PowerShell, with 0 failures. P3 was squash-merged through PR #5 into `main` at `dffd293f33a06a769303aef46f3d323dfa3c1594`. GitHub Actions run [39979200629](https://github.com/naufalelghani/byv-agent/actions/runs/39979200629) passed all 29 tests, and the user verified the same 29 tests passed locally on Windows PowerShell. P3 validates message envelopes and prepares a delivery plan; actual message dispatch and task-state persistence are not included. P4 implementation is underway on `feat/p4-dynamic-registry`: it adds a process-local manager for validated, serialized reloads, preserves active state on failures, records bounded audit events, and adds a candidate preflight CLI.
 
 ## Phases
 
@@ -110,28 +111,30 @@ Acceptance criteria:
 
 ### P4 — Dynamic Registry
 
-**Status: TODO — depends on P0–P3**
+**Status: IN PROGRESS — implementation and CI review pending**
 
 Goal: safely support registry changes during runtime or controlled reloads.
 
-Planned work:
-- Define update/reload semantics and consistency expectations.
-- Validate candidate registry state before activation.
-- Ensure invalid updates do not replace the active registry.
-- Define audit/logging and concurrency behavior.
-- Add tests for successful reload, rejected updates, and consistency.
+Implemented on `feat/p4-dynamic-registry`:
+- `scripts/agent-registry-runtime.mjs` — process-local manager with detached snapshots, SHA-256 digest, generation counter, serialized reloads, candidate validation before activation, no-op detection, and bounded audit events.
+- `scripts/validate-registry-candidate.mjs` — preflight CLI validates a candidate registry without activating it or editing `agents/registry.json`.
+- `tests/registry-runtime.test.mjs` — reload success/failure, preservation of the last valid state, concurrency ordering, no-op behavior, audit bounds, detached snapshots, and CLI behavior.
+- `docs/agent-registry-dynamic.md` — documents API, transactional semantics, and runtime boundaries.
+- CI includes P4 tests.
 
-Acceptance criteria:
-- [ ] Registry updates are validated before activation.
-- [ ] Failed updates leave the last valid registry active.
-- [ ] Reload/update behavior is documented and tested.
+Acceptance criteria (pending CI and PR review):
+- [x] Candidate registry is validated fully before activation.
+- [x] Failed updates leave the last valid in-memory registry, generation, digest, and activation timestamp unchanged.
+- [x] Reload calls are serialized; unchanged candidates do not advance generation.
+- [x] Reload behavior and runtime boundaries are documented; positive and negative cases have automated tests.
+- [ ] GitHub Actions passes on the P4 branch and PR is reviewed/merged.
 
 ## Resume instructions for a future session
 
 1. Read this file first: `task/ROADMAP.md`.
 2. Check the current branch and PR status in GitHub.
 3. Do not assume a status is complete without checking its acceptance checklist and actual test results.
-4. Begin P4 — Dynamic Registry on a dedicated branch; validate candidate states before activation and preserve the last valid in-memory state on failed reloads.
+4. Complete local/CI verification and review PR for P4 — Dynamic Registry before marking P4 DONE.
 
 ## Progress log
 
@@ -144,3 +147,5 @@ Acceptance criteria:
 - 2026-10-23 — P3 CI passed on PR #5: GitHub Actions run [39979012365](https://github.com/naufalelghani/byv-agent/actions/runs/39979012365), 29 tests passed, 0 failed. P3 state moved to REVIEW pending merge approval.
 
 - 2026-10-23 — P3 merged through PR #5 at `dffd293f33a06a769303aef46f3d323dfa3c1594`; GitHub Actions and user-run Windows PowerShell both reported 29 passed, 0 failed. P3 marked DONE.
+
+- 2026-10-23 — Started P4 on `feat/p4-dynamic-registry`: created a process-local transactional registry manager, candidate validation CLI, runtime tests, CI coverage, and documentation. Runtime changes are in memory only; candidate preflight does not modify the checked-in registry.
