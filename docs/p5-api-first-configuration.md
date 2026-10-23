@@ -36,7 +36,7 @@ Avoid placing a real key directly in command history. The prompt above stores th
 Remove-Item Env:ANTHROPIC_API_KEY
 ```
 
-For an external gateway, use the authentication variable the gateway expects rather than guessing the header name.
+For an external gateway, use the authentication variable the gateway expects rather than guessing the header name. Claude Code sends `ANTHROPIC_AUTH_TOKEN` as an Authorization Bearer header and `ANTHROPIC_API_KEY` as an `x-api-key` header. With a saved login present, `ANTHROPIC_AUTH_TOKEN` takes precedence immediately; `ANTHROPIC_API_KEY` may require a one-time interactive approval before it takes over. Run `/status` to confirm the active source. If you want to remove the saved account credential entirely from this CLI profile, use `/logout` after confirming you can still authenticate with your intended API credential.
 
 ## Mode 2 — Third-party Anthropic Messages-compatible endpoint
 
