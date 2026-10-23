@@ -311,6 +311,11 @@ test("MCP JSON-RPC initialize, list, and tool-call messages follow stdio contrac
     }, control);
     assert.equal(initialized.result.protocolVersion, "2025-03-26");
     assert.equal(initialized.result.serverInfo.name, "byv-control-plane");
+    const negotiated = await handleMcpRequest({
+      jsonrpc: "2.0", id: 10, method: "initialize",
+      params: { protocolVersion: "2099-01-01", capabilities: {} },
+    }, control);
+    assert.equal(negotiated.result.protocolVersion, "2025-03-26");
 
     const listed = await handleMcpRequest({ jsonrpc: "2.0", id: 2, method: "tools/list" }, control);
     assert.ok(listed.result.tools.length >= 10);
