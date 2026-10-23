@@ -1,0 +1,6 @@
+# Local BYV Agent run ledger and audit state
+.byv-agent/
+
+# Node/tooling transient files
+node_modules/
+.DS_Store
