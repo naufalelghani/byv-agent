@@ -418,3 +418,25 @@ test("bundled stdio server emits only valid JSON-RPC messages on stdout", async 
     await rm(projectRoot, { recursive: true, force: true });
   }
 });
+
+test("a second control-plane instance does not interrupt a run owned by a live process", async () => {
+  const projectRoot = await createTempProject();
+  try {
+    const first = await createRunLedger({ projectRoot });
+    const run = await createActiveRun(first);
+    const second = await createRunLedger({ projectRoot });
+    const summary = await second.getRunSummary({ runId: run.runId });
+    assert.equal(summary.status, "in_progress");
+    assert.equal(summary.recoveryCount, 0);
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("plugin MCP manifest registers the bundled server through CLAUDE_PLUGIN_ROOT", async () => {
+  const manifest = JSON.parse(await readFile(resolve(pluginRoot, ".mcp.json"), "utf8"));
+  const server = manifest.mcpServers["byv-control-plane"];
+  assert.equal(server.command, "node");
+  assert.ok(server.args[0].includes("${CLAUDE_PLUGIN_ROOT}/scripts/byv-mcp-server.mjs"));
+  assert.equal(server.env.BYV_PLUGIN_ROOT, "${CLAUDE_PLUGIN_ROOT}");
+});
