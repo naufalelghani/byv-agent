@@ -16,12 +16,12 @@ Implement the Agent Registry lifecycle for BYV Agent: define and validate agent 
 
 ## Current overall status
 
-**Current phase: P1 — IN PROGRESS**  
+**Current phase: P1 — REVIEW**  
 **Completed phase: P0 — DONE**  
 **Current working branch: `feat/p1-agent-bootstrap`**  
 **Previous PR: [#2 — feat(P0): implement agent registry core validation](https://github.com/naufalelghani/byv-agent/pull/2) (merged)**
 
-P0's validator and tests passed in the user's local Windows PowerShell checkout on 2026-10-23. PR #2 was squash-merged into `main` at commit `67700779beccc4e6beb42d6797523966cd5466ed`. P1 is now being implemented on a separate branch.
+P0's validator and tests passed in the user's local Windows PowerShell checkout on 2026-10-23. PR #2 was squash-merged into `main` at commit `67700779beccc4e6beb42d6797523966cd5466ed`. P1 implementation is available for review on a separate branch. GitHub Actions run [39974594779](https://github.com/naufalelghani/byv-agent/actions/runs/39974594779) passed registry validation and the combined registry/bootstrap test command. P1 remains in REVIEW until PR #3 is accepted/merged.
 
 ## Phases
 
@@ -48,7 +48,7 @@ Verification evidence (user-run locally on Windows PowerShell):
 
 ### P1 — Bootstrap & Agent Initialization
 
-**Status: IN PROGRESS**
+**Status: REVIEW**
 
 Goal: make the registry the executable source of truth for agent startup, not only documentation.
 
@@ -64,12 +64,12 @@ Implementation scope:
 Boundary: the CLI prepares and validates a bootstrap packet; it does not itself spawn a Claude Code teammate or sandbox shell/network access. Actual startup-context injection and host permissions remain controlled by the host runtime.
 
 Acceptance criteria:
-- [ ] Bootstrap validates the registry and fails closed on invalid registry data.
-- [ ] A known enabled agent initializes with its registered profile contents included in the bootstrap packet.
-- [ ] Unknown or disabled agent IDs are rejected with actionable errors.
-- [ ] Parent-to-target delegation policy is enforced.
-- [ ] Automated tests cover success and failure paths.
-- [ ] Bootstrap and usage documentation are updated.
+- [x] Bootstrap validates the registry and fails closed on invalid registry data — verified in GitHub Actions run 39974594779.
+- [x] A known enabled agent produces a bootstrap packet with registered profile contents — covered by the successful Sam CLI test in GitHub Actions run 39974594779.
+- [x] Unknown and disabled agent IDs are rejected — covered by passing bootstrap tests in GitHub Actions run 39974594779.
+- [x] Parent-to-target delegation policy is enforced — passing test covers a parent without delegation permission.
+- [x] Automated tests cover success and failure paths — `node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs` passed in GitHub Actions run 39974594779.
+- [x] Bootstrap contract and autonomous workflow documentation updated.
 
 ### P2 — Delegation & Task Validation
 
@@ -128,10 +128,10 @@ Acceptance criteria:
 1. Read this file first: `task/ROADMAP.md`.
 2. Check current branch/PR status in GitHub.
 3. Do not assume a status is complete without checking its acceptance checklist and actual test results.
-4. Start with the earliest phase not marked `DONE`; currently that is P1 implementation and verification.
+4. Start with the earliest phase not marked `DONE`; currently that is P1 review/acceptance. Once P1 is accepted, begin P2.
 5. Once P1 is accepted, update this file and begin P2. Record implementation links, test commands/results, blockers, and status changes here.
 
 ## Progress log
 
 - 2026-10-23 — P0 validator/schema/tests/docs committed and verified locally; PR #2 was reviewed and squash-merged into `main` at `67700779beccc4e6beb42d6797523966cd5466ed`.
-- 2026-10-23 — Created `feat/p1-agent-bootstrap` from the updated `main`. Added the reusable validated registry loader, bootstrap packet CLI, initial tests for success/invalid registry/unknown and disabled agents/unauthorized parent, and updated bootstrap and autonomous workflow docs. Local execution of the new tests is still pending because this environment cannot resolve `github.com`; do not mark P1 accepted until the commands run successfully.
+- 2026-10-23 — Created `feat/p1-agent-bootstrap` from the updated `main`. Added the reusable validated registry loader, bootstrap packet CLI, tests, CI workflow, and updated bootstrap/autonomous workflow docs. GitHub Actions run [39974594779](https://github.com/naufalelghani/byv-agent/actions/runs/39974594779) passed both registry validation and automated tests. PR #3 is ready for review; P1 remains `REVIEW` until accepted/merged.
