@@ -21,7 +21,7 @@ Implement the Agent Registry lifecycle for BYV Agent: define and validate agent 
 **Current P2 branch: `feat/p2-delegation-task-validation`**  
 **Latest merged PR: [#3 — feat(P1): add agent bootstrap packet generation](https://github.com/naufalelghani/byv-agent/pull/3)**
 
-P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 is now being implemented on a branch created from `main`; the P2 test suite has been added to CI but has not yet been executed or accepted.
+P0 was merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`. P1 was squash-merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`. On 2026-10-23, local Windows PowerShell verification of the P1 test suite reported 8 passed, 0 failed. P2 implementation is on branch `feat/p2-delegation-task-validation`. GitHub Actions run [39977053975](https://github.com/naufalelghani/byv-agent/actions/runs/39977053975) passed registry validation and all 18 tests. PR #4 is ready for review but remains unmerged.
 
 ## Phases
 
@@ -80,11 +80,12 @@ Implementation added on `feat/p2-delegation-task-validation`:
 - `tests/delegation-validation.test.mjs` — positive/negative policy, malformed payload, unsupported field/option, and CLI cases.
 - CI now includes the P2 test file, and documentation describes the standalone contract.
 
-Acceptance criteria (pending actual execution on this branch):
-- [ ] Delegation is permitted only when registry policy allows it.
-- [ ] Unknown/disabled requester or target, disallowed targets, self-delegation, malformed task payloads, and unsupported fields/options are rejected.
-- [ ] Automated tests cover positive and negative cases; run `node --test tests/agent-registry.test.mjs tests/agent-bootstrap.test.mjs tests/delegation-validation.test.mjs`.
-- [ ] GitHub Actions passes and PR is reviewed/merged.
+Acceptance criteria (automated verification passed; review/merge pending):
+- [x] Delegation is permitted only when registry policy allows it.
+- [x] Unknown/disabled requester or target, disallowed targets, malformed task payloads, and unsupported fields/options are rejected.
+- [x] Automated tests cover positive and negative cases — GitHub Actions run [39977053975](https://github.com/naufalelghani/byv-agent/actions/runs/39977053975): 18 passed, 0 failed.
+- [x] GitHub Actions registry validation and test job passed.
+- [ ] PR #4 is reviewed and merged.
 
 ### P3 — Inter-Agent Messaging
 
@@ -126,11 +127,11 @@ Acceptance criteria:
 1. Read this file first: `task/ROADMAP.md`.
 2. Check the current branch and PR status in GitHub.
 3. Do not assume a status is complete without checking its acceptance checklist and actual test results.
-4. Continue P2 validation on `feat/p2-delegation-task-validation`; run the local test command above, inspect GitHub Actions, then open/review/merge the PR before marking P2 `DONE`.
+4. Run the local test command above in the user's checkout, review PR #4, then merge it before marking P2 `DONE`.
 5. Once P2 is accepted, begin P3 and keep implementation links, test commands/results, and blockers here.
 
 ## Progress log
 
 - 2026-10-23 — P0 schema, validator, tests, and docs verified locally and merged through PR #2 at `67700779beccc4e6beb42d6797523966cd5466ed`.
 - 2026-10-23 — P1 bootstrap CLI, tests, CI, and docs merged through PR #3 at `9c6ae9858f5c7f4a7b2ea317961fb9ff04e9f83c`; user confirmed 8/8 local tests passed.
-- 2026-10-23 — Started P2 on `feat/p2-delegation-task-validation`: added the reusable delegation validator, standalone validation CLI, tests, CI coverage, and documentation. Verification on this branch is pending.
+- 2026-10-23 — Started P2 on `feat/p2-delegation-task-validation`: added the reusable delegation validator, standalone validation CLI, tests, CI coverage, and documentation. GitHub Actions run [39977053975](https://github.com/naufalelghani/byv-agent/actions/runs/39977053975) passed 18/18 tests; PR #4 awaits review/merge.
