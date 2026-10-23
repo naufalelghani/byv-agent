@@ -87,7 +87,7 @@ test("run ledger persists a completed run and enforces evidence-backed task tran
     await ledger.updateTask({ runId: created.runId, taskId: "T-01", status: "IN_PROGRESS" });
     await assert.rejects(
       ledger.updateTask({ runId: created.runId, taskId: "T-01", status: "REVIEW" }),
-      /handoff is recorded/,
+      /handoff for the current attempt/,
     );
     await ledger.recordVerification({
       runId: created.runId,
