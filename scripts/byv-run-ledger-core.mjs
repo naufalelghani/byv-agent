@@ -197,18 +197,20 @@ function normalizeTaskPlan(tasks, registrySnapshot) {
   return normalized;
 }
 
+// Records written by the initial P5.2 ledger did not include attempt labels.
+// Treat those records as attempt 1 so the first rework/recovery correctly advances to 2.
 function currentAttempt(task) {
-  return Number.isSafeInteger(task.attempt) && task.attempt >= 0 ? task.attempt : 0;
+  return Number.isSafeInteger(task.attempt) && task.attempt >= 1 ? task.attempt : 1;
 }
 
 function verificationAttempt(verification) {
-  return Number.isSafeInteger(verification.attempt) && verification.attempt >= 0
-    ? verification.attempt : 0;
+  return Number.isSafeInteger(verification.attempt) && verification.attempt >= 1
+    ? verification.attempt : 1;
 }
 
 function handoffAttempt(handoff) {
-  return handoff && Number.isSafeInteger(handoff.attempt) && handoff.attempt >= 0
-    ? handoff.attempt : 0;
+  return handoff && Number.isSafeInteger(handoff.attempt) && handoff.attempt >= 1
+    ? handoff.attempt : 1;
 }
 
 function latestVerification(task, criterionId, attempt = null) {
@@ -544,17 +546,24 @@ export async function createRunLedger({
         record.status = "interrupted";
         record.recoveryCount = (record.recoveryCount || 0) + 1;
         const blockedTaskIds = [];
+        const blockedTaskAttempts = [];
         for (const task of record.tasks) {
           if (task.status === "IN_PROGRESS") {
+            // A process interruption makes the in-flight attempt's outcome unknown.
+            // Retain its evidence as history, but start a fresh attempt before any
+            // resumed work can satisfy REVIEW/DONE gates.
+            task.attempt = currentAttempt(task) + 1;
             task.status = "BLOCKED";
             task.blockReason = "Recovered after control-plane restart; previous execution outcome is unknown.";
             task.updatedAt = timestamp(clock);
             blockedTaskIds.push(task.taskId);
+            blockedTaskAttempts.push({ taskId: task.taskId, attempt: task.attempt });
           }
         }
         addEvent(record, "run.interrupted", {
           reason: "control-plane-restart",
           inFlightTasksMarkedBlocked: blockedTaskIds,
+          recoveredTaskAttempts: blockedTaskAttempts,
         }, clock, maxEvents);
         await writeRun(record);
         recoveredCount += 1;
