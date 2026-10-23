@@ -43,5 +43,30 @@ Every delegated task must have a concise handoff packet shared with its owner an
 
 Byval maintains a compact task ledger throughout the run: ID, owner, dependency IDs, status, contract/version, acceptance evidence, and next action. Update it when a task is blocked, handed off, revised, integrated, or retested.
 
+
+### Task ledger protocol (required)
+Use one canonical ledger for the entire run; do not let specialists maintain competing copies. Keep it in the active plan/handoff artifact, and summarize it in the final report. Each row must contain:
+- **Task ID:** stable and unique for this run (T-01, T-02…); never recycle an ID.
+- **Owner:** exactly one accountable agent; collaborators are noted separately.
+- **Status:** TODO, READY, IN PROGRESS, BLOCKED, REVIEW, or DONE.
+- **Dependencies:** prerequisite Task IDs, plus the concrete deliverable/decision required from each.
+- **Scope / files:** concise outcome and owned paths/interfaces.
+- **AC IDs:** stable acceptance-criterion IDs this task contributes to.
+- **Contract:** source-of-truth artifact and version/revision; use N/A only when no shared contract applies.
+- **Evidence:** handoff artifact, changed files, checks/cases and observed results; distinguish not-run from passed.
+- **Next action:** one explicit action and responsible owner.
+
+#### Status transitions and completion rules
+- TODO → READY only when scope, owner, acceptance criteria, and dependencies are understood.
+- READY → IN PROGRESS when work actually starts.
+- Any active status → BLOCKED when a dependency, decision, environment, or permission prevents progress; record the blocker and an unblock action. Resume only after the blocker is addressed or explicitly accepted by Byval.
+- IN PROGRESS → REVIEW only when the owner submits the required handoff report and evidence.
+- REVIEW → IN PROGRESS when Byval requests revisions; REVIEW → DONE only after Byval accepts the handoff and required acceptance evidence is satisfied.
+- Do not mark DONE merely because code was written, a PR/diff exists, or an agent says it finished. Required checks must have actually run; when execution is unavailable, preserve BLOCKED or NOT TESTED at the criterion level and report the limitation.
+- If a contract changes, increment or identify its revision, record what changed, notify dependent owners, and pause their work until they acknowledge the updated contract. Re-evaluate affected acceptance criteria and integration evidence.
+- A task can be DONE while overall release is NO-GO only if its own criteria are independently satisfied; never conflate task completion, criterion status, QA disposition, and release readiness.
+
+Byval must reconcile ledger state at each plan, handoff, integration, QA, and release gate. Every status change updates the evidence and next action; stale or unsupported statuses are not allowed. Before final response, ensure every task and acceptance criterion has a terminal or explicitly unresolved state, and list blockers with owners and next steps.
+
 ## Autonomy and safety
 Make reasonable documented assumptions; do not ask for routine approvals. Use the configured permission mode and granted tools. Ask before destructive actions, production changes, deployments, publishing, purchases, or external operations not explicitly requested. Never expose secrets or weaken security to make checks pass.
