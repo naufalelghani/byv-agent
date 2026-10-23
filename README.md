@@ -1,13 +1,13 @@
 # byv-agent
 
-A Claude Code plugin bundling four specialist agents for an autonomous software-development workflow:
+A Claude Code plugin bundling four named specialist agents coordinated by **Byval**, the Lead Agent & Autonomous Development Orchestrator:
 
-- Planning & Research
-- Backend Engineer
-- Frontend Engineer
-- Security & QA Auditor
+- **Sam** — Planning & Research Specialist
+- **Jarvis** — Backend Engineer
+- **Chloe** — Frontend Engineer
+- **Morgan** — Security & QA Auditor
 
-The lead agent coordinates planning, implementation, integration, independent QA, and bounded repair cycles. Invoke the command with a detailed project request:
+Byval coordinates planning, implementation, integration, independent QA, and bounded repair cycles. Invoke the command with a detailed project request:
 
 ```text
 /byv-agent:autonomous Build a web app with authentication, role-based access, responsive UI, API tests, and security QA.
@@ -21,15 +21,15 @@ This project is also inspired by *La La Land* and the feeling behind *City of St
 
 ## Frontend design skills (bundled)
 
-The Frontend Engineer includes two plugin skills:
+The Frontend Engineer Chloe includes two plugin skills:
 - `frontend-design` — design process, visual hierarchy, responsive implementation, accessibility, and interaction states.
 - `ui-ux-pro-max` — structured selection/review of visual direction, design tokens, palettes, typography, layout, and UX.
 
-They live in the plugin's `skills/` directory and are available when the plugin is installed. **No separate skill installation or manual setup is required.** The Frontend Engineer is instructed to load them for relevant UI tasks. They are used as contextual guidance, not as rigid templates; project requirements and accessibility take precedence.
+They live in the plugin's `skills/` directory and are available when the plugin is installed. **No separate skill installation or manual setup is required.** Chloe is instructed to load them for relevant UI tasks. They are used as contextual guidance, not as rigid templates; project requirements and accessibility take precedence.
 
 ## Backend documentation skill (Context7)
 
-The Backend Engineer is instructed to load the bundled `context7` skill for framework, library, SDK, database, and backend API documentation. It uses Context7 MCP documentation lookup when those tools are available in the Claude Code runtime, and falls back transparently to repository evidence if they are not. The skill file is included with the plugin; **live Context7 lookup still requires Context7 MCP to be configured in the runtime**.
+Backend Engineer Jarvis is instructed to load the bundled `context7` skill for framework, library, SDK, database, and backend API documentation. It uses Context7 MCP documentation lookup when those tools are available in the Claude Code runtime, and falls back transparently to repository evidence if they are not. The skill file is included with the plugin; **live Context7 lookup still requires Context7 MCP to be configured in the runtime**.
 
 ## Install from this GitHub marketplace
 
@@ -83,9 +83,9 @@ README.md
 
 ## Notes
 
-- The Security & QA agent is intentionally read-only for application source.
+- Morgan (Security & QA Auditor) is intentionally read-only for application source.
 - Parallel implementation depends on runtime support and task/file boundaries.
-- The lead must report actual verification results and any unresolved risks.
+- Byval must report actual verification results and any unresolved risks.
 - Review changes before deploying or using them in production.
 
 ## License
