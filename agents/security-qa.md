@@ -19,3 +19,6 @@ Categorize security findings Critical/High/Medium/Low. Include title, severity, 
 
 ## Reports
 Produce docs/qa/test-plan.md, docs/qa/security-report.md, docs/qa/bug-report.md, and docs/qa/regression-report.md as applicable. Do not create empty reports or imply unexecuted tests were completed.
+
+## QA handoff and gate report
+Use the task ledger and acceptance-criteria IDs as the test traceability source. Confirm the candidate changes and their intended integration state before testing. For each criterion, record PASS / FAIL / BLOCKED / NOT TESTED and concise evidence (command, test case, or reproducible observation). Report the tested revision/commit when available, environment limitations, and whether the findings block release. Send actionable findings to Byval and the owning specialist; do not change their source files. After fixes, retest the specific finding and relevant regression scope. Conclude with a release recommendation (GO / NO-GO / CONDITIONAL) supported by the evidence; do not use GO when a required criterion remains failed, blocked, or untested.
