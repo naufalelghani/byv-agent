@@ -16,18 +16,18 @@ Implement the Agent Registry lifecycle for BYV Agent: define and validate agent 
 
 ## Current overall status
 
-**Current phase: P0 — REVIEW**  
-**Next phase: P1 — TODO (blocked on P0 acceptance)**  
-**Current working branch: `feat/p0-agent-registry-core`**  
-**Related PR: [#2 — feat(P0): implement agent registry core validation](https://github.com/naufalelghani/byv-agent/pull/2)**
+**Current phase: P1 — IN PROGRESS**  
+**Completed phase: P0 — DONE**  
+**Current working branch: `feat/p1-agent-bootstrap`**  
+**Previous PR: [#2 — feat(P0): implement agent registry core validation](https://github.com/naufalelghani/byv-agent/pull/2) (merged)**
 
-P0 files are committed on the PR branch. The two verification commands have now been run successfully in the user's local Windows PowerShell checkout on 2026-10-23. Keep P0 in `REVIEW` until PR #2 is reviewed and merged or explicitly accepted.
+P0's validator and tests passed in the user's local Windows PowerShell checkout on 2026-10-23. PR #2 was squash-merged into `main` at commit `67700779beccc4e6beb42d6797523966cd5466ed`. P1 is now being implemented on a separate branch.
 
 ## Phases
 
 ### P0 — Agent Registry Core
 
-**Status: REVIEW**
+**Status: DONE**
 
 Scope:
 - Add JSON Schema for `agents/registry.json`.
@@ -35,39 +35,41 @@ Scope:
 - Add tests for the current registry and uniqueness.
 - Document the core contract and commands.
 
-Implemented on PR #2:
+Implemented and merged in PR #2:
 - `agents/registry.schema.json`
 - `scripts/validate-agent-registry.mjs`
 - `tests/agent-registry.test.mjs`
 - `docs/p0-agent-registry-core.md`
 
-Acceptance / resume checklist:
-- [x] From repository root, run `node scripts/validate-agent-registry.mjs` — passed; registry `byv-agent-registry`, schema `1.0.0`, 5 agents.
-- [x] Run `node --test tests/agent-registry.test.mjs` — passed; 2 tests, 0 failures.
-- [x] Review any failures and fix them on the P0 branch — no failures reported by the local run.
-- [ ] Review and merge/accept PR #2.
-- [ ] Change status to `DONE` only after successful verification and acceptance.
+Verification evidence (user-run locally on Windows PowerShell):
+- [x] `node scripts/validate-agent-registry.mjs` — passed; registry `byv-agent-registry`, schema `1.0.0`, 5 agents.
+- [x] `node --test tests/agent-registry.test.mjs` — passed; 2 tests, 0 failures.
+- [x] PR #2 reviewed for merge readiness and merged into `main`.
 
 ### P1 — Bootstrap & Agent Initialization
 
-**Status: TODO — blocked on P0 acceptance**
+**Status: IN PROGRESS**
 
 Goal: make the registry the executable source of truth for agent startup, not only documentation.
 
-Planned work:
-- Define a clear bootstrap entry point and input contract.
-- Load and validate the registry before agent initialization.
-- Resolve agent identity and profile from registry metadata.
-- Enforce enabled/disabled state and declared configuration at bootstrap.
-- Add tests for successful initialization and invalid/missing agent cases.
-- Document how to launch an agent through the bootstrap flow.
+Implementation scope:
+- Define a clear bootstrap CLI entry point and input contract.
+- Load and validate the registry before constructing any bootstrap packet.
+- Resolve agent identity and load its registered profile.
+- Enforce enabled state, parent identity, and the parent's declared delegation target rules.
+- Reject unknown agents, disabled agents, missing task data, and invalid registry data.
+- Emit a structured bootstrap packet for the host/orchestrator to inject into a spawned agent's startup context.
+- Add automated tests and usage documentation.
+
+Boundary: the CLI prepares and validates a bootstrap packet; it does not itself spawn a Claude Code teammate or sandbox shell/network access. Actual startup-context injection and host permissions remain controlled by the host runtime.
 
 Acceptance criteria:
-- [ ] Bootstrap reads the registry and fails closed on invalid registry data.
-- [ ] A known enabled agent initializes using its registered profile.
+- [ ] Bootstrap validates the registry and fails closed on invalid registry data.
+- [ ] A known enabled agent initializes with its registered profile contents included in the bootstrap packet.
 - [ ] Unknown or disabled agent IDs are rejected with actionable errors.
+- [ ] Parent-to-target delegation policy is enforced.
 - [ ] Automated tests cover success and failure paths.
-- [ ] Usage documentation is updated.
+- [ ] Bootstrap and usage documentation are updated.
 
 ### P2 — Delegation & Task Validation
 
@@ -124,12 +126,12 @@ Acceptance criteria:
 ## Resume instructions for a future session
 
 1. Read this file first: `task/ROADMAP.md`.
-2. Check the PR linked above and the current branch/status in GitHub.
-3. Do not assume a status is complete without checking its acceptance checklist and CI/test results.
-4. Start with the earliest phase not marked `DONE`; currently that is P0 PR review/acceptance.
-5. Once P0 is accepted, update this file and begin P1. Record implementation links, test commands/results, blockers, and status changes here.
+2. Check current branch/PR status in GitHub.
+3. Do not assume a status is complete without checking its acceptance checklist and actual test results.
+4. Start with the earliest phase not marked `DONE`; currently that is P1 implementation and verification.
+5. Once P1 is accepted, update this file and begin P2. Record implementation links, test commands/results, blockers, and status changes here.
 
 ## Progress log
 
-- 2026-10-23 — P0 validator/schema/tests/docs committed to `feat/p0-agent-registry-core`; PR #2 opened as draft. Tests were initially not executable in the authoring environment due to GitHub clone/network resolution failure. Added this durable roadmap and handoff in `task/ROADMAP.md`.
-- 2026-10-23 — User ran `node scripts/validate-agent-registry.mjs` successfully (registry valid, 5 agents) and `node --test tests/agent-registry.test.mjs` successfully (2 passed, 0 failed) from a local Windows PowerShell checkout. P0 remains `REVIEW` pending PR review/acceptance.
+- 2026-10-23 — P0 validator/schema/tests/docs committed and verified locally; PR #2 was reviewed and squash-merged into `main` at `67700779beccc4e6beb42d6797523966cd5466ed`.
+- 2026-10-23 — Created `feat/p1-agent-bootstrap` from the updated `main`; beginning P1 bootstrap CLI, policy validation, automated tests, and docs.
