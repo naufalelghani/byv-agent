@@ -13,6 +13,14 @@ The lead agent coordinates planning, implementation, integration, independent QA
 /byv-agent:autonomous Build a web app with authentication, role-based access, responsive UI, API tests, and security QA.
 ```
 
+## A Project Built on Dreams
+
+![A quiet purple sky filled with stars, overlooking a distant city at dusk](docs/images/dreams-sky.png)
+
+I created BYV Agent with a simple belief: technology can be both powerful and beautiful. Inspired by the *state of the art*, I see software as a blend of engineering, art, elegance, and structure — where thoughtful design and meaningful functionality come together.
+
+This project is also inspired by *La La Land* and the feeling behind *City of Stars (Mia & Sebastian’s Theme)*. It reminds me of the dreams people hold for their future — the things they hope to become, the worlds they want to build, and the possibilities they refuse to give up on. BYV Agent is part of my own journey toward those dreams: a small step today, with hope for what tomorrow may bring.
+
 ## Frontend design skills (bundled)
 
 The Frontend Engineer includes two plugin skills:
