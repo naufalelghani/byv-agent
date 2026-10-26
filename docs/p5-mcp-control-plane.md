@@ -31,7 +31,7 @@
 | `byv_resume_run` | Explicitly resume an interrupted run after review |
 | `byv_get_run_summary` | Retrieve a durable, redacted summary and audit trail |
 
-The MCP server is a control plane, not an agent transport. `byv_prepare_agent` returns startup context only; it is not proof that a teammate was spawned. The `executionMode` field records the mode selected by the orchestrator, not an independently verified dispatch. Native Agent Teams, custom subagent invocation, and end-to-end dispatch evidence are P5.3.
+The MCP server is a control plane, not an agent transport. `byv_prepare_agent` returns startup context only; it is not proof that a teammate was spawned. The `executionMode` field records the mode selected by the orchestrator, not an independently verified dispatch. The P5.3 autonomous-command contract now describes how the host runtime must perform actual dispatch and persist evidence; end-to-end dispatch evidence still requires the manual smoke test documented in [P5.3 Native Runtime Integration](p5-native-runtime-integration.md).
 
 ## Task ledger contract
 

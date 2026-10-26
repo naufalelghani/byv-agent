@@ -16,16 +16,16 @@ Implement the Agent Registry lifecycle for BYV Agent: define and validate agent 
 
 ## Current overall status
 
-**Current phase: P5.2 — REVIEW (implementation branch; PR not yet opened)**  
+**Current phase: P5.3 — REVIEW (workflow integration; Claude Code runtime smoke pending)**  
 **Completed phases: P0 — DONE; P1 — DONE; P2 — DONE; P3 — DONE; P4 — DONE; P5.1 — DONE**  
-**Current branch: `feat/p5-2-mcp-control-plane-ledger`**  
+**Current branch: `feat/p5-3-native-runtime-integration`**  
 **P5 design:** [docs/p5-runtime-orchestration.md](../docs/p5-runtime-orchestration.md), merged through [PR #7](https://github.com/naufalelghani/byv-agent/pull/7)  
 **P5.1:** merged through [PR #8](https://github.com/naufalelghani/byv-agent/pull/8), merge commit `f902a4122f7fbba9da44360497e1be348f264715)  
-**P5.2 implementation:** see [docs/p5-mcp-control-plane.md](../docs/p5-mcp-control-plane.md); this implementation branch adds the local MCP control plane, versioned durable task ledger, recovery, and control-plane tests. CI and review are pending.
+**P5.2 implementation:** [PR #9](https://github.com/naufalelghani/byv-agent/pull/9) adds the MCP control plane and ledger; stacked draft [PR #10](https://github.com/naufalelghani/byv-agent/pull/10) hardens attempt evidence, redaction, and lock recovery. P5.3 workflow integration is being developed on this stacked branch.
 
 P0–P4 are complete and merged. P3 validates inter-agent message envelopes but does not implement transport. P4 implements a process-local transactional registry manager. P5.1 adds registry schema v1.1.0 runtime mappings, the API-only preflight, secret-free provider profile metadata validation, and aligned Sam/Morgan tool allowlists. P5.1 local checks and GitHub Actions reported 49 passed, 0 failed before PR #8 was squash-merged. P5.1 does not spawn agents or establish arbitrary third-party model compatibility.
 
-P5.2 provides a local stdio MCP server and durable project-scoped run/task ledger. The ledger pins registry/provider/model metadata, enforces task transitions and acceptance evidence gates, persists handoffs/verifications, redacts common secret patterns, uses atomic writes and an exclusive write lock, bounds records/retention, and marks in-flight tasks BLOCKED with unknown outcome after an interrupted run. P5.2 does not spawn native Agent Teams or custom agents; those remain P5.3. Local 9Router/model-specific compatibility, streaming and full agentic behavior remain P5.4 verification work.
+P5.2 provides a local stdio MCP server and durable project-scoped run/task ledger. The ledger pins registry/provider/model metadata, enforces task transitions and acceptance evidence gates, persists handoffs/verifications, redacts common secret patterns, uses atomic writes and an exclusive write lock, bounds records/retention, and marks in-flight tasks BLOCKED with unknown outcome after an interrupted run. P5.2 does not spawn native Agent Teams or custom agents. P5.3 now wires the autonomous command to the ledger contract, but actual Claude Code MCP discovery and dispatch are still unverified until a runtime smoke test is recorded. Local 9Router/model-specific compatibility, streaming and full agentic behavior remain P5.4 verification work.
 
 ## Phases
 
@@ -137,7 +137,7 @@ Acceptance criteria:
 
 ### P5 — Runtime Orchestration Integration
 
-**Status: IN PROGRESS — P5.1 implementation and CI review pending**
+**Status: IN PROGRESS — P5.1 complete; P5.2 review and P5.3 workflow integration underway**
 
 Design approved and merged via PR #7: [P5 Runtime Orchestration](../docs/p5-runtime-orchestration.md).
 
@@ -185,17 +185,39 @@ Acceptance checklist:
 - [x] Durable ledger, atomic writes, bounded history/retention, path containment and interrupted-run recovery are implemented.
 - [x] Task transition and acceptance-evidence gates are implemented.
 - [x] Tests and documentation are added.
-- [x] GitHub Actions passes on PR head `d9272cad84ba5f6447f7b5c02b32999b4d275e11`: [run 39999038927](https://github.com/naufalelghani/byv-agent/actions/runs/39999038927), 63 passed, 0 failed.
+- [x] GitHub Actions passed on the original P5.2 PR head `d9272cad84ba5f6447f7b5c02b32999b4d275e11`: [run 39999038927](https://github.com/naufalelghani/byv-agent/actions/runs/39999038927), 63 passed, 0 failed.
+- [x] Stacked hardening PR #10 reports registry/provider validation and 68 tests passed, 0 failed on head `0fcf4ec2d00ad6ed22432745f039f273118ce506`: [run 40011899867](https://github.com/naufalelghani/byv-agent/actions/runs/40011899867).
 - [ ] User/maintainer review and PR merge.
 - [ ] Verify the MCP server launches under the user's Claude Code version using `/mcp` and test the exposed control-plane tools.
-- [ ] P5.3 native runtime dispatch and P5.4 provider compatibility remain separate phases.
+- [ ] Review and merge the P5.2 PR chain in order; the P5.3 workflow branch is stacked on hardening PR #10.
+
+#### P5.3 — Native Runtime Integration Workflow
+
+**Status: REVIEW — static workflow contract implemented; live Claude Code smoke pending**
+
+Implementation branch: `feat/p5-3-native-runtime-integration`. See [docs/p5-native-runtime-integration.md](../docs/p5-native-runtime-integration.md).
+
+- `/byv-agent:autonomous` now defines explicit MCP preflight, run creation, one canonical plan, agent preparation, actual host dispatch, handoff/verification, QA, interruption recovery, and final-summary gates.
+- The command distinguishes control-plane tool calls from real dispatch. Agent Teams is chosen only when enabled and exposed; supported custom-subagent invocation or sequential mode is the fallback.
+- `tests/byv-autonomous-workflow.test.mjs` statically checks required tool calls, ordering, and the runtime-dispatch/evidence boundary. CI includes the test.
+
+Acceptance checklist:
+- [x] Workflow contract and runbook added.
+- [x] Static regression test added and included in CI.
+- [ ] GitHub Actions passes on this branch head.
+- [ ] Verify `/mcp` discovery and API-only preflight in Claude Code.
+- [ ] Verify one actual dispatch/fallback and ledger evidence in a disposable project.
+- [ ] Review fallback behavior and Morgan read-only QA in a live host session.
+
+Boundary: static tests do not prove native agent spawn, live provider compatibility, or billing/auth source. P5.4 remains provider/model-specific verification work.
 
 ## Resume instructions for a future session
 
 1. Read this file first: `task/ROADMAP.md`.
 2. Check the current branch and PR status in GitHub.
 3. Do not assume a status is complete without checking its acceptance checklist and actual test results.
-4. Finish review of P5.2 branch/PR and verify its final CI head. Merge only after review; then begin P5.3 native runtime integration.
+4. Review/merge the stacked P5.2 PRs in dependency order (#9, then #10), and review the P5.3 branch against the hardening head.
+5. Run the manual P5.3 Claude Code smoke test before calling native dispatch verified; then continue with P5.4 provider compatibility.
 
 ## Progress log
 
@@ -224,3 +246,5 @@ Acceptance checklist:
 
 - 2026-10-24 — P5.1 PR #8 squash-merged into `main` at `f902a4122f7fbba9da44360497e1be348f264715` after 49/49 tests and local API-first/Read-tool smoke tests. Provider streaming and native agent dispatch were not certified.
 - 2026-10-24 — Started P5.2 on `feat/p5-2-mcp-control-plane-ledger`: added the bundled stdio MCP control plane, registry status/reload and bootstrap preparation tools, API preflight reporting, durable project-scoped run/task ledger, interruption recovery, enforced task transitions/evidence gates, tests, docs, plugin MCP registration and CI coverage. Final branch CI and PR review are pending. CI now passes on PR head `d9272cad84ba5f6447f7b5c02b32999b4d275e11` (GitHub Actions run [39999038927](https://github.com/naufalelghani/byv-agent/actions/runs/39999038927), 63 passed, 0 failed).
+
+- 2026-10-26 — Started P5.3 on `feat/p5-3-native-runtime-integration`, stacked on PR #10's head. Connected `/byv-agent:autonomous` instructions to the P5.2 control-plane contract, added a runtime smoke-test guide and a static workflow regression test, and wired the test into CI. No live Claude Code `/mcp` or agent-spawn smoke test has been executed by this change.
