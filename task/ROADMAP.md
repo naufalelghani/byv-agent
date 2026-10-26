@@ -204,7 +204,7 @@ Implementation branch: `feat/p5-3-native-runtime-integration`. See [docs/p5-nati
 Acceptance checklist:
 - [x] Workflow contract and runbook added.
 - [x] Static regression test added and included in CI.
-- [ ] GitHub Actions passes on this branch head.
+- [x] GitHub Actions run [40287400794](https://github.com/naufalelghani/byv-agent/actions/runs/40287400794) passed on implementation head `3a52062fc9a3a16500696f53c71394281af5bff7`: registry/provider validation passed and 70 tests passed, 0 failed.
 - [ ] Verify `/mcp` discovery and API-only preflight in Claude Code.
 - [ ] Verify one actual dispatch/fallback and ledger evidence in a disposable project.
 - [ ] Review fallback behavior and Morgan read-only QA in a live host session.
